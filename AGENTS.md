@@ -193,3 +193,127 @@ Use Wayfinder to generate TypeScript functions for Laravel routes. Import from `
 - IMPORTANT: Activate `inertia-react-development` when working with Inertia React client-side patterns.
 
 </laravel-boost-guidelines>
+
+---
+
+# AfyaScope HMS — Project Rules
+
+## Project identity
+
+AfyaScope HMS is a specialized management system for a single endoscopy center.
+
+Technology stack:
+
+- Laravel 13
+- React
+- TypeScript
+- Inertia
+- Tailwind CSS
+- MySQL
+- Pest
+
+## Mandatory project documentation
+
+Before planning or implementing AfyaScope business functionality, read:
+
+1. `docs/AfyaScope_Phase_0_Implementation_Blueprint.md`
+2. `docs/brand-ui-guidelines.md`
+
+These files define the approved product scope and UX direction.
+
+The Laravel Boost instructions above define framework and tooling conventions.
+
+If there is a conflict:
+
+- Laravel/Boost rules govern framework implementation conventions.
+- The AfyaScope Phase 0 blueprint governs business requirements and workflows.
+
+## Scope control
+
+Do not invent actors, modules, entities, workflow states, integrations, or business rules.
+
+The MVP contains exactly six staff actors:
+
+- Receptionist
+- Accountant / Cashier
+- Doctor / Endoscopist
+- Nurse / Clinical Staff
+- Administrator
+- Management
+
+The MVP contains five business modules:
+
+1. Patient & Visit Management
+2. Billing & Payments
+3. Clinical & Procedure Management
+4. Nursing, Recovery & Discharge
+5. Administration & Basic Reporting
+
+## Mandatory financial workflow
+
+AfyaScope has two financial-clearance gates.
+
+### Gate 1 — Consultation
+
+`Visit Created → Consultation Charge → Consultation Payment → Consultation Financial Clearance → Check-in → Consultation`
+
+### Gate 2 — Procedure
+
+`Consultation → Procedure Determined/Ordered → Procedure Charge → Procedure Payment → Procedure Financial Clearance → Nurse Preparation → Procedure`
+
+There is no routine third billing stage after the procedure in the canonical MVP workflow.
+
+## Core domain distinctions
+
+Do not collapse these concepts:
+
+- Patient = persistent person record
+- Appointment = scheduled attendance
+- Visit = actual episode of care
+- Procedure = clinical procedure performed within a Visit
+- Charge = amount owed for a service
+- Payment = money recorded as received
+- Financial Clearance = permission for the workflow to proceed
+
+## Authorization
+
+Backend authorization is authoritative.
+
+React UI visibility is never sufficient security.
+
+Role capabilities must follow the Phase 0 blueprint.
+
+## Development approach
+
+- Prefer small, reviewable implementation checkpoints.
+- Do not implement multiple business modules in one task unless explicitly requested.
+- Do not introduce generic HMS features that are outside the blueprint.
+- Keep important workflow transitions in backend application logic.
+- Do not scatter business-state rules through React components.
+- Prefer feature tests for business workflows.
+- When a business rule is unclear, stop and ask rather than inventing behavior.
+
+## UX
+
+Read `docs/brand-ui-guidelines.md` before implementing application screens or shared UI.
+
+The visual inspiration provided for AfyaScope is style guidance only.
+
+Do not infer features, navigation, workflows, modules, or entities from inspiration images.
+
+## Explicit MVP exclusions
+
+Do not implement unless specifically approved:
+
+- full inventory / stock management
+- supplier / purchase-order workflows
+- endoscope lifecycle management
+- dedicated histopathology management
+- live M-Pesa integration
+- live card gateway integration
+- live insurance API integration
+- government reporting integration
+- accounting-software integration
+- advanced BI
+- full offline synchronization
+- multi-tenant administration
