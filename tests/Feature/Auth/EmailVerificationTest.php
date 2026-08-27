@@ -24,7 +24,7 @@ it('marks an authenticated staff email as verified from a valid signed link', fu
 
     $response = $this->actingAs($user)->get($verificationUrl);
 
-    $response->assertRedirect(route('home').'?verified=1');
+    $response->assertRedirect(route('dashboard').'?verified=1');
     expect($user->fresh()->hasVerifiedEmail())->toBeTrue();
 });
 

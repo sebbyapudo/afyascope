@@ -19,7 +19,7 @@ it('authenticates a staff user with valid credentials', function () {
         'password' => 'password',
     ]);
 
-    $response->assertRedirect(route('home'));
+    $response->assertRedirect(route('dashboard'));
     $this->assertAuthenticatedAs($user);
 });
 
@@ -31,7 +31,7 @@ it('allows an unverified staff user to sign in', function () {
         'password' => 'password',
     ]);
 
-    $response->assertRedirect(route('home'));
+    $response->assertRedirect(route('dashboard'));
     $this->assertAuthenticatedAs($user);
 });
 

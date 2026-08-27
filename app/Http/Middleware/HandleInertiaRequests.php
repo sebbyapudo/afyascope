@@ -2,6 +2,9 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Role;
+use App\Models\User;
+use App\StaffPermission;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -35,11 +38,32 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        $user = $request->user();
+
+        if ($user instanceof User) {
+            $user->loadMissing('role.permissions');
+        }
+
         return [
             ...parent::share($request),
             'name' => config('app.name'),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user instanceof User ? [
+                    'id' => $user->id,
+                    'name' => $user->name,
+                    'email' => $user->email,
+                ] : null,
+                'role' => $user instanceof User ? [
+                    'slug' => $user->role->slug,
+                    'displayName' => $user->role->name,
+                ] : null,
+                'capabilities' => [
+                    'viewDashboard' => $user?->can(StaffPermission::DashboardView) ?? false,
+                    'viewUsers' => $user?->can('viewAny', User::class) ?? false,
+                    'manageUsers' => $user?->can('create', User::class) ?? false,
+                    'viewRoles' => $user?->can('viewAny', Role::class) ?? false,
+                    'viewAudit' => $user?->can(StaffPermission::AuditView) ?? false,
+                ],
             ],
         ];
     }

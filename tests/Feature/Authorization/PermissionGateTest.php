@@ -1,0 +1,52 @@
+<?php
+
+use App\Models\Permission;
+use App\Models\User;
+use App\StaffPermission;
+use App\StaffRole;
+use Illuminate\Support\Facades\Gate;
+
+test('all six staff roles can pass the dashboard gate', function (StaffRole $role) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->allows(StaffPermission::DashboardView))->toBeTrue();
+})->with(StaffRole::cases());
+
+test('administrator and management retain audit visibility', function (StaffRole $role) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->allows(StaffPermission::AuditView))->toBeTrue();
+})->with([
+    StaffRole::Administrator,
+    StaffRole::Management,
+]);
+
+test('operational roles do not receive audit visibility', function (StaffRole $role) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->denies(StaffPermission::AuditView))->toBeTrue();
+})->with([
+    StaffRole::Receptionist,
+    StaffRole::Accountant,
+    StaffRole::Doctor,
+    StaffRole::Nurse,
+]);
+
+test('an administrator has no blanket authorization bypass', function () {
+    $administrator = User::factory()->forRole(StaffRole::Administrator)->create();
+
+    expect(Gate::forUser($administrator)->denies('future.permission'))->toBeTrue()
+        ->and(Gate::forUser($administrator)->denies('*'))->toBeTrue();
+});
+
+test('gate authorization follows database permissions instead of role names', function () {
+    $administrator = User::factory()->forRole(StaffRole::Administrator)->create();
+    $dashboardPermission = Permission::query()
+        ->where('slug', StaffPermission::DashboardView->value)
+        ->sole();
+
+    $administrator->role->permissions()->detach($dashboardPermission);
+    $administrator->unsetRelation('role');
+
+    expect(Gate::forUser($administrator)->denies(StaffPermission::DashboardView))->toBeTrue();
+});

@@ -1,14 +1,24 @@
-export type User = {
+export type AuthenticatedUser = {
     id: number;
     name: string;
     email: string;
-    avatar?: string;
-    email_verified_at: string | null;
-    created_at: string;
-    updated_at: string;
-    [key: string]: unknown; // This allows for additional properties...
+};
+
+export type StaffRole = {
+    slug: string;
+    displayName: string;
+};
+
+export type Capabilities = {
+    viewDashboard: boolean;
+    viewUsers: boolean;
+    manageUsers: boolean;
+    viewRoles: boolean;
+    viewAudit: boolean;
 };
 
 export type Auth = {
-    user: User;
+    user: AuthenticatedUser | null;
+    role: StaffRole | null;
+    capabilities: Capabilities;
 };
