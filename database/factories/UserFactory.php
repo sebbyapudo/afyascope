@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Role;
 use App\Models\User;
+use App\StaffRole;
 use Illuminate\Database\Eloquent\Factories\Factory;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
@@ -25,6 +27,9 @@ class UserFactory extends Factory
     public function definition(): array
     {
         return [
+            'role_id' => fn (): int => (int) Role::query()
+                ->where('slug', StaffRole::Receptionist->value)
+                ->soleValue('id'),
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
@@ -40,6 +45,15 @@ class UserFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'email_verified_at' => null,
+        ]);
+    }
+
+    public function forRole(StaffRole $role): static
+    {
+        return $this->state(fn (): array => [
+            'role_id' => (int) Role::query()
+                ->where('slug', $role->value)
+                ->soleValue('id'),
         ]);
     }
 }
