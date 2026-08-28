@@ -30,6 +30,7 @@ class UserFactory extends Factory
             'role_id' => fn (): int => (int) Role::query()
                 ->where('slug', StaffRole::Receptionist->value)
                 ->soleValue('id'),
+            'is_active' => true,
             'name' => fake()->name(),
             'email' => fake()->unique()->safeEmail(),
             'email_verified_at' => now(),
@@ -54,6 +55,13 @@ class UserFactory extends Factory
             'role_id' => (int) Role::query()
                 ->where('slug', $role->value)
                 ->soleValue('id'),
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (): array => [
+            'is_active' => false,
         ]);
     }
 }

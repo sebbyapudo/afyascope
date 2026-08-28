@@ -16,6 +16,7 @@ use Illuminate\Support\Carbon;
 /**
  * @property int $id
  * @property int $role_id
+ * @property bool $is_active
  * @property string $name
  * @property string $email
  * @property Carbon|null $email_verified_at
@@ -41,6 +42,10 @@ class User extends Authenticatable implements MustVerifyEmail
 
     public function hasPermission(StaffPermission|string $permission): bool
     {
+        if (! $this->is_active) {
+            return false;
+        }
+
         return $this->role?->hasPermission($permission) ?? false;
     }
 
@@ -53,6 +58,7 @@ class User extends Authenticatable implements MustVerifyEmail
     {
         return [
             'email_verified_at' => 'datetime',
+            'is_active' => 'boolean',
             'password' => 'hashed',
         ];
     }
