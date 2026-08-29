@@ -2,7 +2,9 @@
 
 namespace App\Console\Commands;
 
+use App\Actions\Audit\RecordAuditLog;
 use App\Actions\Fortify\PasswordValidationRules;
+use App\AuditAction;
 use App\Models\Role;
 use App\Models\User;
 use App\StaffRole;
@@ -24,7 +26,7 @@ class CreateAdministrator extends Command
     /**
      * Execute the console command.
      */
-    public function handle(): int
+    public function handle(RecordAuditLog $recordAuditLog): int
     {
         $administratorRole = Role::query()
             ->where('slug', StaffRole::Administrator->value)
@@ -67,7 +69,7 @@ class CreateAdministrator extends Command
         }
 
         try {
-            $user = DB::transaction(function () use ($administratorRole, $name, $email, $password): User {
+            $user = DB::transaction(function () use ($administratorRole, $name, $email, $password, $recordAuditLog): User {
                 $lockedRole = Role::query()
                     ->whereKey($administratorRole->getKey())
                     ->lockForUpdate()
@@ -84,6 +86,21 @@ class CreateAdministrator extends Command
                 $user->email = $email;
                 $user->password = Hash::make($password);
                 $user->save();
+
+                $recordAuditLog->handle(
+                    actor: null,
+                    action: AuditAction::AdministratorBootstrapped,
+                    subject: $user,
+                    afterValues: [
+                        'name' => $user->name,
+                        'email' => $user->email,
+                        'role' => [
+                            'slug' => $lockedRole->slug,
+                            'name' => $lockedRole->name,
+                        ],
+                        'is_active' => $user->is_active,
+                    ],
+                );
 
                 return $user;
             });

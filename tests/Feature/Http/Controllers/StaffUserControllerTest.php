@@ -1,5 +1,7 @@
 <?php
 
+use App\AuditAction;
+use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\User;
 use App\StaffRole;
@@ -73,6 +75,25 @@ it('creates a staff account with one canonical role and sends a password setup n
         ResetPassword::class,
         fn (ResetPassword $notification): bool => filled($notification->token),
     );
+
+    $auditLog = AuditLog::query()->sole();
+    $afterValues = $auditLog->after_values;
+    expect($auditLog->actor->is($administrator))->toBeTrue()
+        ->and($auditLog->action)->toBe(AuditAction::StaffCreated)
+        ->and($auditLog->subject->is($staffUser))->toBeTrue()
+        ->and($auditLog->before_values)->toBeNull()
+        ->and($afterValues)->toHaveCount(4)
+        ->and($afterValues)->toHaveKey('name', 'New Staff Member')
+        ->and($afterValues)->toHaveKey('email', 'new.staff@example.com')
+        ->and($afterValues)->toHaveKey('role.slug', StaffRole::Doctor->value)
+        ->and($afterValues)->toHaveKey('role.name', StaffRole::Doctor->displayName())
+        ->and($afterValues)->toHaveKey('is_active', true)
+        ->and((string) json_encode([
+            $auditLog->before_values,
+            $auditLog->after_values,
+            $auditLog->metadata,
+        ]))->not->toContain('administrator-selected-password')
+        ->not->toContain('token');
 });
 
 it('creates an inactive staff account when that status is selected', function () {

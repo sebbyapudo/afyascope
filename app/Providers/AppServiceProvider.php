@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\User;
+use App\Policies\AuditLogPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
 use App\StaffPermission;
@@ -57,6 +59,7 @@ class AppServiceProvider extends ServiceProvider
 
     private function configureAuthorization(): void
     {
+        Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
 

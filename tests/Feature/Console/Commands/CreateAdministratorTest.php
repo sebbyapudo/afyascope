@@ -1,5 +1,7 @@
 <?php
 
+use App\AuditAction;
+use App\Models\AuditLog;
 use App\Models\Role;
 use App\Models\User;
 use App\StaffRole;
@@ -25,6 +27,24 @@ it('creates the first active Administrator with normalized credentials and a sec
         ->and($administrator->role->slug)->toBe(StaffRole::Administrator->value)
         ->and(Hash::check($password, $administrator->password))->toBeTrue()
         ->and($administrator->toArray())->not->toHaveKey('password');
+
+    $auditLog = AuditLog::query()->sole();
+    $afterValues = $auditLog->after_values;
+    expect($auditLog->actor_id)->toBeNull()
+        ->and($auditLog->action)->toBe(AuditAction::AdministratorBootstrapped)
+        ->and($auditLog->subject->is($administrator))->toBeTrue()
+        ->and($auditLog->before_values)->toBeNull()
+        ->and($afterValues)->toHaveCount(4)
+        ->and($afterValues)->toHaveKey('name', 'Initial Administrator')
+        ->and($afterValues)->toHaveKey('email', 'initial.admin@example.com')
+        ->and($afterValues)->toHaveKey('role.slug', StaffRole::Administrator->value)
+        ->and($afterValues)->toHaveKey('role.name', StaffRole::Administrator->displayName())
+        ->and($afterValues)->toHaveKey('is_active', true)
+        ->and(json_encode([
+            $auditLog->before_values,
+            $auditLog->after_values,
+            $auditLog->metadata,
+        ]))->not->toContain($password);
 });
 
 it('fails safely when the canonical Administrator role is missing', function () {
@@ -34,7 +54,8 @@ it('fails safely when the canonical Administrator role is missing', function () 
         ->expectsOutputToContain('canonical Administrator role is missing')
         ->assertExitCode(Command::FAILURE);
 
-    expect(User::query()->count())->toBe(0);
+    expect(User::query()->count())->toBe(0)
+        ->and(AuditLog::query()->count())->toBe(0);
 });
 
 it('rejects an email already assigned to another staff user after normalization', function () {
@@ -51,7 +72,8 @@ it('rejects an email already assigned to another staff user after normalization'
 
     expect(User::query()->count())->toBe(1)
         ->and(User::query()->where('email', 'existing.staff@example.com')->sole()->role->slug)
-        ->toBe(StaffRole::Receptionist->value);
+        ->toBe(StaffRole::Receptionist->value)
+        ->and(AuditLog::query()->count())->toBe(0);
 });
 
 it('refuses repeated bootstrap while an active Administrator exists', function () {
@@ -61,7 +83,8 @@ it('refuses repeated bootstrap while an active Administrator exists', function (
         ->expectsOutputToContain('An active Administrator already exists')
         ->assertExitCode(Command::FAILURE);
 
-    expect(User::query()->count())->toBe(1);
+    expect(User::query()->count())->toBe(1)
+        ->and(AuditLog::query()->count())->toBe(0);
 });
 
 it('uses the application password rules', function () {
@@ -76,4 +99,5 @@ it('uses the application password rules', function () {
         ->assertExitCode(Command::FAILURE);
 
     $this->assertDatabaseMissing('users', ['email' => 'initial.admin@example.com']);
+    expect(AuditLog::query()->count())->toBe(0);
 });

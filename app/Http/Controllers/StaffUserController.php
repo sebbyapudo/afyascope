@@ -53,7 +53,13 @@ class StaffUserController extends Controller
      */
     public function store(StoreStaffUserRequest $request, CreateStaffUser $createStaffUser): RedirectResponse
     {
-        $staffUser = $createStaffUser->handle($request->staffAttributes());
+        $actor = $request->user();
+
+        if (! $actor instanceof User) {
+            abort(403);
+        }
+
+        $staffUser = $createStaffUser->handle($actor, $request->staffAttributes());
 
         return redirect()->route('staff.index')->with(
             'status',
@@ -82,14 +88,19 @@ class StaffUserController extends Controller
         User $staffUser,
         UpdateStaffUser $updateStaffUser,
     ): RedirectResponse {
-        $updatedStaffUser = $updateStaffUser->handle($staffUser, $request->staffAttributes());
         $actor = $request->user();
 
-        if ($actor instanceof User && $actor->is($updatedStaffUser)) {
+        if (! $actor instanceof User) {
+            abort(403);
+        }
+
+        $updatedStaffUser = $updateStaffUser->handle($actor, $staffUser, $request->staffAttributes());
+
+        if ($actor->is($updatedStaffUser)) {
             $actor->refresh();
         }
 
-        $redirectRoute = $actor?->can('viewAny', User::class) ? 'staff.index' : 'dashboard';
+        $redirectRoute = $actor->can('viewAny', User::class) ? 'staff.index' : 'dashboard';
 
         return redirect()->route($redirectRoute)->with(
             'status',
