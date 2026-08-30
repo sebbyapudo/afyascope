@@ -1,22 +1,27 @@
 import { Head } from '@inertiajs/react';
+import { PageContainer } from '@/components/ui/page-container';
+import { PageHeader } from '@/components/ui/page-header';
+import { Panel } from '@/components/ui/panel';
 
 export default function Dashboard() {
     return (
         <>
             <Head title="Dashboard" />
-            <main className="min-h-screen bg-slate-50 p-6 sm:p-8">
-                <section className="mx-auto max-w-5xl rounded-2xl border border-slate-200 bg-white p-6 sm:p-8">
-                    <p className="text-sm font-medium text-slate-500">
-                        AfyaScope
-                    </p>
-                    <h1 className="mt-2 text-3xl font-semibold text-slate-900">
-                        Dashboard
-                    </h1>
-                    <p className="mt-3 text-sm text-slate-600">
+            <PageContainer>
+                <PageHeader
+                    description="Your secure starting point for AfyaScope operations."
+                    eyebrow="AfyaScope"
+                    title="Dashboard"
+                />
+                <Panel className="p-6 sm:p-8">
+                    <h2 className="text-lg font-semibold text-text">
+                        Welcome back
+                    </h2>
+                    <p className="mt-2 text-sm leading-6 text-text-secondary">
                         You are signed in to the AfyaScope workspace.
                     </p>
-                </section>
-            </main>
+                </Panel>
+            </PageContainer>
         </>
     );
 }
