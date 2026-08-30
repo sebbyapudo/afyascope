@@ -5,7 +5,7 @@ import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
-import { dashboard } from '@/routes';
+import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { create, edit } from '@/routes/staff';
 import type { StaffUser } from '@/types';
 
@@ -24,11 +24,6 @@ export default function StaffIndex({ staffUsers, status }: StaffIndexProps) {
                         <ActionLink href={create()}>
                             Add staff member
                         </ActionLink>
-                    }
-                    backLink={
-                        <Link className={textLinkStyles} href={dashboard()}>
-                            Back to dashboard
-                        </Link>
                     }
                     description="Assign one approved role and control account access for each staff member."
                     title="Staff accounts"
@@ -126,3 +121,5 @@ export default function StaffIndex({ staffUsers, status }: StaffIndexProps) {
         </>
     );
 }
+
+StaffIndex.layout = [AuthenticatedLayout];

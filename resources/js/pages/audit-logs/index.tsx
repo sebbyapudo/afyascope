@@ -1,10 +1,10 @@
-import { Head, Link } from '@inertiajs/react';
-import { ActionLink, textLinkStyles } from '@/components/ui/button';
+import { Head } from '@inertiajs/react';
+import { ActionLink } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
-import { dashboard } from '@/routes';
+import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { index } from '@/routes/audit-logs';
 import type { AuditChange, AuditLogPage, AuditValue } from '@/types';
 
@@ -76,11 +76,6 @@ export default function AuditLogIndex({ auditLogs }: AuditLogIndexProps) {
             <Head title="Audit history" />
             <PageContainer width="wide">
                 <PageHeader
-                    backLink={
-                        <Link className={textLinkStyles} href={dashboard()}>
-                            Back to dashboard
-                        </Link>
-                    }
                     description="Read-only history of important administrative changes."
                     title="Audit history"
                 />
@@ -213,3 +208,5 @@ export default function AuditLogIndex({ auditLogs }: AuditLogIndexProps) {
         </>
     );
 }
+
+AuditLogIndex.layout = [AuthenticatedLayout];

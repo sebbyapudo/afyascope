@@ -18,10 +18,14 @@ export function PageContainer({
     width = 'default',
 }: PageContainerProps) {
     return (
-        <main className="min-h-screen bg-canvas px-4 py-6 sm:px-8 sm:py-8">
-            <div className={cn('mx-auto grid gap-6', widths[width], className)}>
-                {children}
-            </div>
-        </main>
+        <div
+            className={cn(
+                'mx-auto grid w-full gap-6',
+                widths[width],
+                className,
+            )}
+        >
+            {children}
+        </div>
     );
 }

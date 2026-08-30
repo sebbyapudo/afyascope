@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
+import AuthenticatedLayout from '@/layouts/authenticated-layout';
 
 export default function Dashboard() {
     return (
@@ -25,3 +26,5 @@ export default function Dashboard() {
         </>
     );
 }
+
+Dashboard.layout = [AuthenticatedLayout];

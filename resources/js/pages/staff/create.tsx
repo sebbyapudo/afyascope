@@ -4,6 +4,7 @@ import { textLinkStyles } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
+import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { index, store } from '@/routes/staff';
 import type { RoleOption } from '@/types';
 
@@ -37,3 +38,5 @@ export default function CreateStaff({ roles }: CreateStaffProps) {
         </>
     );
 }
+
+CreateStaff.layout = [AuthenticatedLayout];
