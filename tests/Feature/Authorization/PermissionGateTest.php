@@ -39,6 +39,21 @@ test('an administrator has no blanket authorization bypass', function () {
         ->and(Gate::forUser($administrator)->denies('*'))->toBeTrue();
 });
 
+test('only Receptionist receives the patient and visit creation gates', function (StaffRole $role, bool $allowed) {
+    $user = User::factory()->forRole($role)->create();
+    $gate = Gate::forUser($user);
+
+    expect($gate->allows(StaffPermission::PatientsCreate))->toBe($allowed)
+        ->and($gate->allows(StaffPermission::VisitsCreate))->toBe($allowed);
+})->with([
+    'Receptionist' => [StaffRole::Receptionist, true],
+    'Accountant' => [StaffRole::Accountant, false],
+    'Doctor' => [StaffRole::Doctor, false],
+    'Nurse' => [StaffRole::Nurse, false],
+    'Administrator' => [StaffRole::Administrator, false],
+    'Management' => [StaffRole::Management, false],
+]);
+
 test('gate authorization follows database permissions instead of role names', function () {
     $administrator = User::factory()->forRole(StaffRole::Administrator)->create();
     $dashboardPermission = Permission::query()

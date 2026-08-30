@@ -3,11 +3,15 @@
 namespace App\Providers;
 
 use App\Models\AuditLog;
+use App\Models\Patient;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Visit;
 use App\Policies\AuditLogPolicy;
+use App\Policies\PatientPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
+use App\Policies\VisitPolicy;
 use App\StaffPermission;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\Date;
@@ -60,8 +64,10 @@ class AppServiceProvider extends ServiceProvider
     private function configureAuthorization(): void
     {
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
+        Gate::policy(Patient::class, PatientPolicy::class);
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
+        Gate::policy(Visit::class, VisitPolicy::class);
 
         foreach (StaffPermission::cases() as $permission) {
             Gate::define(
