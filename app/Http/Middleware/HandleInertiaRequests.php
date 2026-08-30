@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Patient;
 use App\Models\Role;
 use App\Models\User;
 use App\StaffPermission;
@@ -63,6 +64,9 @@ class HandleInertiaRequests extends Middleware
                     'manageUsers' => $user?->can('create', User::class) ?? false,
                     'viewRoles' => $user?->can('viewAny', Role::class) ?? false,
                     'viewAudit' => $user?->can(StaffPermission::AuditView) ?? false,
+                    'viewPatients' => $user?->can('viewAny', Patient::class) ?? false,
+                    'createPatients' => $user?->can('create', Patient::class) ?? false,
+                    'updatePatients' => $user?->can(StaffPermission::PatientsUpdate) ?? false,
                 ],
             ],
         ];

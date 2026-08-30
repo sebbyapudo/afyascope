@@ -6,10 +6,16 @@ use App\Policies\PatientPolicy;
 use App\StaffRole;
 use Illuminate\Support\Facades\Gate;
 
-test('only Receptionist may register Patients', function (StaffRole $role, bool $allowed) {
+test('only Receptionist receives Patient registry capabilities', function (StaffRole $role, bool $allowed) {
     $user = User::factory()->forRole($role)->create();
+    $patient = Patient::factory()->create();
+    $gate = Gate::forUser($user);
 
-    expect(Gate::forUser($user)->allows('create', Patient::class))->toBe($allowed);
+    expect($gate->allows('viewAny', Patient::class))->toBe($allowed)
+        ->and($gate->allows('view', $patient))->toBe($allowed)
+        ->and($gate->allows('create', Patient::class))->toBe($allowed)
+        ->and($gate->allows('update', $patient))->toBe($allowed)
+        ->and($gate->denies('delete', $patient))->toBeTrue();
 })->with([
     'Receptionist' => [StaffRole::Receptionist, true],
     'Accountant' => [StaffRole::Accountant, false],
@@ -19,26 +25,19 @@ test('only Receptionist may register Patients', function (StaffRole $role, bool 
     'Management' => [StaffRole::Management, false],
 ]);
 
-test('guests and inactive Receptionists cannot register Patients', function () {
+test('guests and inactive Receptionists cannot access Patient registry capabilities', function () {
     $inactiveReceptionist = User::factory()
         ->forRole(StaffRole::Receptionist)
         ->inactive()
         ->create();
 
-    expect(Gate::forUser(null)->denies('create', Patient::class))->toBeTrue()
-        ->and(Gate::forUser($inactiveReceptionist)->denies('create', Patient::class))->toBeTrue();
-});
-
-test('Patient viewing updating and deletion are not capabilities in this checkpoint', function () {
-    $receptionist = User::factory()->forRole(StaffRole::Receptionist)->create();
     $patient = Patient::factory()->create();
-    $gate = Gate::forUser($receptionist);
+    $guestGate = Gate::forUser(null);
+    $inactiveGate = Gate::forUser($inactiveReceptionist);
 
-    expect(method_exists(PatientPolicy::class, 'viewAny'))->toBeFalse()
-        ->and(method_exists(PatientPolicy::class, 'view'))->toBeFalse()
-        ->and(method_exists(PatientPolicy::class, 'update'))->toBeFalse()
-        ->and(method_exists(PatientPolicy::class, 'delete'))->toBeFalse()
-        ->and($gate->denies('view', $patient))->toBeTrue()
-        ->and($gate->denies('update', $patient))->toBeTrue()
-        ->and($gate->denies('delete', $patient))->toBeTrue();
+    expect(method_exists(PatientPolicy::class, 'delete'))->toBeFalse()
+        ->and($guestGate->denies('viewAny', Patient::class))->toBeTrue()
+        ->and($guestGate->denies('create', Patient::class))->toBeTrue()
+        ->and($inactiveGate->denies('view', $patient))->toBeTrue()
+        ->and($inactiveGate->denies('update', $patient))->toBeTrue();
 });

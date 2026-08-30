@@ -2,6 +2,7 @@ import { Link } from '@inertiajs/react';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { index as auditLogIndex } from '@/routes/audit-logs';
+import { index as patientIndex } from '@/routes/patients';
 import { index as staffIndex } from '@/routes/staff';
 import type { Capabilities } from '@/types';
 
@@ -41,6 +42,12 @@ export function navigationItems(
             href: dashboard(),
             label: 'Dashboard',
             visible: capabilities.viewDashboard,
+        },
+        {
+            active: isCurrentPath(currentUrl, patientIndex.url(), true),
+            href: patientIndex(),
+            label: 'Patients',
+            visible: capabilities.viewPatients,
         },
         {
             active: isCurrentPath(currentUrl, staffIndex.url(), true),

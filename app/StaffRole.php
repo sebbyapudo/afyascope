@@ -35,6 +35,8 @@ enum StaffRole: string
             self::Receptionist => [
                 StaffPermission::DashboardView,
                 StaffPermission::PatientsCreate,
+                StaffPermission::PatientsView,
+                StaffPermission::PatientsUpdate,
                 StaffPermission::VisitsCreate,
             ],
             self::Administrator => [

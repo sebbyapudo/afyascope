@@ -8,6 +8,7 @@ enum AuditAction: string
     case StaffCreated = 'staff.created';
     case StaffUpdated = 'staff.updated';
     case PatientRegistered = 'patient.registered';
+    case PatientUpdated = 'patient.updated';
     case VisitCreated = 'visit.created';
 
     public function displayName(): string
@@ -17,6 +18,7 @@ enum AuditAction: string
             self::StaffCreated => 'Staff account created',
             self::StaffUpdated => 'Staff account updated',
             self::PatientRegistered => 'Patient registered',
+            self::PatientUpdated => 'Patient demographics updated',
             self::VisitCreated => 'Visit created',
         };
     }

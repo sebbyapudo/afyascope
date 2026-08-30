@@ -25,6 +25,9 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'manageUsers' => true,
                 'viewRoles' => true,
                 'viewAudit' => true,
+                'viewPatients' => false,
+                'createPatients' => false,
+                'updatePatients' => false,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -44,6 +47,23 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'manageUsers' => false,
                 'viewRoles' => false,
                 'viewAudit' => false,
+                'viewPatients' => false,
+                'createPatients' => false,
+                'updatePatients' => false,
             ])
+        );
+});
+
+test('Receptionist Inertia responses expose only the Patient capabilities granted to the role', function () {
+    $receptionist = User::factory()->forRole(StaffRole::Receptionist)->create();
+
+    $this->actingAs($receptionist)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.capabilities.viewPatients', true)
+            ->where('auth.capabilities.createPatients', true)
+            ->where('auth.capabilities.updatePatients', true)
+            ->where('auth.capabilities.viewUsers', false)
+            ->where('auth.capabilities.viewAudit', false)
         );
 });

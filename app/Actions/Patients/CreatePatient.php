@@ -24,6 +24,7 @@ class CreatePatient
         Gate::forUser($actor)->authorize('create', Patient::class);
 
         $validated = Validator::make($attributes, [
+            'id' => ['prohibited'],
             'patient_number' => ['prohibited'],
             'first_name' => ['required', 'string', 'max:100'],
             'middle_name' => ['nullable', 'string', 'max:100'],

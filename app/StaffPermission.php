@@ -10,6 +10,8 @@ enum StaffPermission: string
     case RolesView = 'roles.view';
     case AuditView = 'audit.view';
     case PatientsCreate = 'patients.create';
+    case PatientsView = 'patients.view';
+    case PatientsUpdate = 'patients.update';
     case VisitsCreate = 'visits.create';
 
     public function displayName(): string
@@ -21,6 +23,8 @@ enum StaffPermission: string
             self::RolesView => 'View roles',
             self::AuditView => 'View audit log',
             self::PatientsCreate => 'Register patients',
+            self::PatientsView => 'View patients',
+            self::PatientsUpdate => 'Update patient demographics',
             self::VisitsCreate => 'Create visits',
         };
     }
