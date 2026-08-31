@@ -39,6 +39,9 @@ enum StaffRole: string
                 StaffPermission::PatientsUpdate,
                 StaffPermission::VisitsCreate,
                 StaffPermission::VisitsView,
+                StaffPermission::AppointmentsView,
+                StaffPermission::AppointmentsCreate,
+                StaffPermission::AppointmentsUpdate,
             ],
             self::Administrator => [
                 StaffPermission::DashboardView,

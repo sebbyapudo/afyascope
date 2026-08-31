@@ -30,6 +30,9 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'updatePatients' => false,
                 'viewVisits' => false,
                 'createVisits' => false,
+                'viewAppointments' => false,
+                'createAppointments' => false,
+                'updateAppointments' => false,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -54,6 +57,9 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'updatePatients' => false,
                 'viewVisits' => false,
                 'createVisits' => false,
+                'viewAppointments' => false,
+                'createAppointments' => false,
+                'updateAppointments' => false,
             ])
         );
 });
@@ -69,6 +75,9 @@ test('Receptionist Inertia responses expose only the Patient capabilities grante
             ->where('auth.capabilities.updatePatients', true)
             ->where('auth.capabilities.viewVisits', true)
             ->where('auth.capabilities.createVisits', true)
+            ->where('auth.capabilities.viewAppointments', true)
+            ->where('auth.capabilities.createAppointments', true)
+            ->where('auth.capabilities.updateAppointments', true)
             ->where('auth.capabilities.viewUsers', false)
             ->where('auth.capabilities.viewAudit', false)
         );

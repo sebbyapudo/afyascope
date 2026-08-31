@@ -4,8 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Actions\Patients\CreatePatient;
 use App\Actions\Patients\UpdatePatient;
+use App\AppointmentStatus;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
+use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\User;
 use App\Models\Visit;
@@ -128,10 +130,32 @@ class PatientController extends Controller
                 ])
                 ->values()
             : collect();
+        $upcomingAppointments = ($request->user()?->can('viewAny', Appointment::class) ?? false)
+            ? Appointment::query()
+                ->whereBelongsTo($patient)
+                ->where('status', AppointmentStatus::Scheduled)
+                ->where('scheduled_at', '>=', now())
+                ->select(['id', 'patient_id', 'appointment_number', 'scheduled_at', 'status'])
+                ->orderBy('scheduled_at')
+                ->orderBy('id')
+                ->limit(5)
+                ->get()
+                ->map(fn (Appointment $appointment): array => [
+                    'id' => $appointment->id,
+                    'appointmentNumber' => $appointment->appointment_number,
+                    'scheduledAt' => $appointment->scheduled_at->toIso8601String(),
+                    'status' => [
+                        'value' => $appointment->status->value,
+                        'label' => $appointment->status->displayName(),
+                    ],
+                ])
+                ->values()
+            : collect();
 
         return Inertia::render('patients/show', [
             'patient' => $this->patientData($patient),
             'recentVisits' => $recentVisits,
+            'upcomingAppointments' => $upcomingAppointments,
             'status' => is_string($status) ? $status : null,
         ]);
     }

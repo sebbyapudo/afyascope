@@ -26,6 +26,7 @@ use LogicException;
  * @property string|null $address
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
+ * @property-read Collection<int, Appointment> $appointments
  * @property-read Collection<int, Visit> $visits
  */
 #[Fillable([
@@ -42,6 +43,14 @@ class Patient extends Model
 {
     /** @use HasFactory<PatientFactory> */
     use HasFactory;
+
+    /**
+     * @return HasMany<Appointment, $this>
+     */
+    public function appointments(): HasMany
+    {
+        return $this->hasMany(Appointment::class);
+    }
 
     /**
      * @return HasMany<Visit, $this>

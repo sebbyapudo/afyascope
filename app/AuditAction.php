@@ -10,6 +10,10 @@ enum AuditAction: string
     case PatientRegistered = 'patient.registered';
     case PatientUpdated = 'patient.updated';
     case VisitCreated = 'visit.created';
+    case AppointmentCreated = 'appointment.created';
+    case AppointmentRescheduled = 'appointment.rescheduled';
+    case AppointmentCancelled = 'appointment.cancelled';
+    case AppointmentNoShow = 'appointment.no_show';
 
     public function displayName(): string
     {
@@ -20,6 +24,10 @@ enum AuditAction: string
             self::PatientRegistered => 'Patient registered',
             self::PatientUpdated => 'Patient demographics updated',
             self::VisitCreated => 'Visit created',
+            self::AppointmentCreated => 'Appointment created',
+            self::AppointmentRescheduled => 'Appointment rescheduled',
+            self::AppointmentCancelled => 'Appointment cancelled',
+            self::AppointmentNoShow => 'Appointment marked no-show',
         };
     }
 }

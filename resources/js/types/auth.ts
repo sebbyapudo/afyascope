@@ -20,6 +20,9 @@ export type Capabilities = {
     updatePatients: boolean;
     viewVisits: boolean;
     createVisits: boolean;
+    viewAppointments: boolean;
+    createAppointments: boolean;
+    updateAppointments: boolean;
 };
 
 export type Auth = {

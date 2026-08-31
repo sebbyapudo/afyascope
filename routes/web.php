@@ -1,12 +1,17 @@
 <?php
 
+use App\Http\Controllers\AppointmentCancelController;
+use App\Http\Controllers\AppointmentController;
+use App\Http\Controllers\AppointmentNoShowController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PatientAppointmentController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicateController;
 use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitController;
+use App\Models\Appointment;
 use App\Models\AuditLog;
 use App\Models\Patient;
 use App\Models\User;
@@ -20,6 +25,25 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/appointments', [AppointmentController::class, 'index'])
+        ->can('viewAny', Appointment::class)
+        ->name('appointments.index');
+    Route::get('/appointments/{appointment}/edit', [AppointmentController::class, 'edit'])
+        ->can('update', 'appointment')
+        ->name('appointments.edit');
+    Route::put('/appointments/{appointment}', [AppointmentController::class, 'update'])
+        ->can('update', 'appointment')
+        ->name('appointments.update');
+    Route::post('/appointments/{appointment}/cancel', AppointmentCancelController::class)
+        ->can('update', 'appointment')
+        ->name('appointments.cancel');
+    Route::post('/appointments/{appointment}/no-show', AppointmentNoShowController::class)
+        ->can('update', 'appointment')
+        ->name('appointments.no-show');
+    Route::get('/appointments/{appointment}', [AppointmentController::class, 'show'])
+        ->can('view', 'appointment')
+        ->name('appointments.show');
+
     Route::get('/visits', [VisitController::class, 'index'])
         ->can('viewAny', Visit::class)
         ->name('visits.index');
@@ -39,6 +63,12 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/patients', [PatientController::class, 'store'])
         ->can('create', Patient::class)
         ->name('patients.store');
+    Route::get('/patients/{patient}/appointments/create', [PatientAppointmentController::class, 'create'])
+        ->can('create', Appointment::class)
+        ->name('patients.appointments.create');
+    Route::post('/patients/{patient}/appointments', [PatientAppointmentController::class, 'store'])
+        ->can('create', Appointment::class)
+        ->name('patients.appointments.store');
     Route::get('/patients/{patient}/visits/create', [PatientVisitController::class, 'create'])
         ->can('create', Visit::class)
         ->name('patients.visits.create');

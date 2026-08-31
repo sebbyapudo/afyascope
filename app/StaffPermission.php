@@ -14,6 +14,9 @@ enum StaffPermission: string
     case PatientsUpdate = 'patients.update';
     case VisitsCreate = 'visits.create';
     case VisitsView = 'visits.view';
+    case AppointmentsView = 'appointments.view';
+    case AppointmentsCreate = 'appointments.create';
+    case AppointmentsUpdate = 'appointments.update';
 
     public function displayName(): string
     {
@@ -28,6 +31,9 @@ enum StaffPermission: string
             self::PatientsUpdate => 'Update patient demographics',
             self::VisitsCreate => 'Create visits',
             self::VisitsView => 'View visits',
+            self::AppointmentsView => 'View appointments',
+            self::AppointmentsCreate => 'Create appointments',
+            self::AppointmentsUpdate => 'Update appointments',
         };
     }
 }
