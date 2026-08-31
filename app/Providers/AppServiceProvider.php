@@ -4,12 +4,14 @@ namespace App\Providers;
 
 use App\Models\Appointment;
 use App\Models\AuditLog;
+use App\Models\Bill;
 use App\Models\Patient;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Visit;
 use App\Policies\AppointmentPolicy;
 use App\Policies\AuditLogPolicy;
+use App\Policies\BillPolicy;
 use App\Policies\PatientPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
@@ -67,6 +69,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Gate::policy(AuditLog::class, AuditLogPolicy::class);
         Gate::policy(Appointment::class, AppointmentPolicy::class);
+        Gate::policy(Bill::class, BillPolicy::class);
         Gate::policy(Patient::class, PatientPolicy::class);
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);

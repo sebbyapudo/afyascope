@@ -8,5 +8,6 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Http/Controllers/PatientController.php | .ai/rules/controllers.md |
 | database/** | .ai/rules/database.md |
 | database/migrations/*_create_visits_table.php | .ai/rules/migrations.md |
+| app/{Models,Actions,Policies}/**/*.php | .ai/rules/models-actions-policies.md |
 | app/Models/{Patient,Visit}.php | .ai/rules/models.md |
 | resources/** | .ai/rules/resources.md |

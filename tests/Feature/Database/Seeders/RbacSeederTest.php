@@ -19,6 +19,7 @@ test('the canonical roles and permissions are seeded exactly', function () {
         'appointments.update' => 'Update appointments',
         'appointments.view' => 'View appointments',
         'audit.view' => 'View audit log',
+        'billing.view' => 'View billing',
         'dashboard.view' => 'View dashboard',
         'patients.create' => 'Register patients',
         'patients.update' => 'Update patient demographics',
@@ -33,7 +34,7 @@ test('the canonical roles and permissions are seeded exactly', function () {
 
 test('canonical role permission mappings are exact', function () {
     $expectedMappings = [
-        'accountant' => ['dashboard.view'],
+        'accountant' => ['billing.view', 'dashboard.view'],
         'administrator' => [
             'audit.view',
             'dashboard.view',
@@ -67,7 +68,7 @@ test('canonical role permission mappings are exact', function () {
         ->all();
 
     expect($actualMappings)->toBe($expectedMappings)
-        ->and(DB::table('permission_role')->count())->toBe(19);
+        ->and(DB::table('permission_role')->count())->toBe(20);
 });
 
 test('the rbac seeder is idempotent and repairs canonical mappings', function () {
@@ -85,7 +86,7 @@ test('the rbac seeder is idempotent and repairs canonical mappings', function ()
     expect(Role::query()->orderBy('slug')->pluck('id', 'slug')->all())->toBe($roleIds)
         ->and(Permission::query()->orderBy('slug')->pluck('id', 'slug')->all())->toBe($permissionIds)
         ->and(Role::query()->count())->toBe(6)
-        ->and(Permission::query()->count())->toBe(13)
+        ->and(Permission::query()->count())->toBe(14)
         ->and($management->fresh()->permissions->pluck('slug')->sort()->values()->all())
         ->toBe(['audit.view', 'dashboard.view']);
 });

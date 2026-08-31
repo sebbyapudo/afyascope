@@ -17,6 +17,7 @@ enum StaffPermission: string
     case AppointmentsView = 'appointments.view';
     case AppointmentsCreate = 'appointments.create';
     case AppointmentsUpdate = 'appointments.update';
+    case BillingView = 'billing.view';
 
     public function displayName(): string
     {
@@ -34,6 +35,7 @@ enum StaffPermission: string
             self::AppointmentsView => 'View appointments',
             self::AppointmentsCreate => 'Create appointments',
             self::AppointmentsUpdate => 'Update appointments',
+            self::BillingView => 'View billing',
         };
     }
 }
