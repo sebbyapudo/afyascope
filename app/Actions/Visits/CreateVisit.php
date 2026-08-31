@@ -31,6 +31,8 @@ class CreateVisit
         }
 
         $validated = Validator::make($attributes, [
+            'id' => ['prohibited'],
+            'patient_id' => ['prohibited'],
             'visit_number' => ['prohibited'],
             'status' => ['prohibited'],
             'occurred_at' => ['nullable', Rule::date()],

@@ -4,10 +4,13 @@ use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicateController;
+use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\StaffUserController;
+use App\Http\Controllers\VisitController;
 use App\Models\AuditLog;
 use App\Models\Patient;
 use App\Models\User;
+use App\Models\Visit;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard')->name('home');
@@ -17,6 +20,13 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/visits', [VisitController::class, 'index'])
+        ->can('viewAny', Visit::class)
+        ->name('visits.index');
+    Route::get('/visits/{visit}', [VisitController::class, 'show'])
+        ->can('view', 'visit')
+        ->name('visits.show');
+
     Route::get('/patients', [PatientController::class, 'index'])
         ->can('viewAny', Patient::class)
         ->name('patients.index');
@@ -29,6 +39,12 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/patients', [PatientController::class, 'store'])
         ->can('create', Patient::class)
         ->name('patients.store');
+    Route::get('/patients/{patient}/visits/create', [PatientVisitController::class, 'create'])
+        ->can('create', Visit::class)
+        ->name('patients.visits.create');
+    Route::post('/patients/{patient}/visits', [PatientVisitController::class, 'store'])
+        ->can('create', Visit::class)
+        ->name('patients.visits.store');
     Route::get('/patients/{patient}', [PatientController::class, 'show'])
         ->can('view', 'patient')
         ->name('patients.show');

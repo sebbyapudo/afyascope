@@ -3,12 +3,16 @@ import { ActionLink, textLinkStyles } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
+import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { edit, index } from '@/routes/patients';
-import type { PatientDetails } from '@/types';
+import { create as createVisit } from '@/routes/patients/visits';
+import { show as showVisit } from '@/routes/visits';
+import type { PatientDetails, RecentVisit } from '@/types';
 
 type ShowPatientProps = {
     patient: PatientDetails;
+    recentVisits: RecentVisit[];
     status?: string | null;
 };
 
@@ -22,7 +26,18 @@ function formatDate(date: string | null): string {
     );
 }
 
-export default function ShowPatient({ patient, status }: ShowPatientProps) {
+function formatDateTime(date: string): string {
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(new Date(date));
+}
+
+export default function ShowPatient({
+    patient,
+    recentVisits,
+    status,
+}: ShowPatientProps) {
     const { props } = usePage();
     const fields = [
         ['Full name', patient.name],
@@ -47,11 +62,21 @@ export default function ShowPatient({ patient, status }: ShowPatientProps) {
             <PageContainer>
                 <PageHeader
                     actions={
-                        props.auth.capabilities.updatePatients ? (
-                            <ActionLink href={edit(patient.id)}>
-                                Edit demographics
-                            </ActionLink>
-                        ) : null
+                        <div className="flex flex-wrap gap-3">
+                            {props.auth.capabilities.createVisits ? (
+                                <ActionLink href={createVisit(patient.id)}>
+                                    Start new Visit
+                                </ActionLink>
+                            ) : null}
+                            {props.auth.capabilities.updatePatients ? (
+                                <ActionLink
+                                    href={edit(patient.id)}
+                                    variant="secondary"
+                                >
+                                    Edit demographics
+                                </ActionLink>
+                            ) : null}
+                        </div>
                     }
                     backLink={
                         <Link className={textLinkStyles} href={index()}>
@@ -89,6 +114,75 @@ export default function ShowPatient({ patient, status }: ShowPatientProps) {
                         ))}
                     </dl>
                 </Panel>
+
+                {props.auth.capabilities.viewVisits ? (
+                    <Panel className="overflow-hidden">
+                        <div className="border-b border-border px-5 py-4">
+                            <h2 className="text-lg font-semibold text-text">
+                                Recent Visits
+                            </h2>
+                            <p className="mt-1 text-sm text-text-secondary">
+                                The five most recent attendance episodes for
+                                this Patient.
+                            </p>
+                        </div>
+                        {recentVisits.length === 0 ? (
+                            <div className="px-5 py-8 text-sm text-text-secondary">
+                                No Visits have been created for this Patient.
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-2xl text-left text-sm">
+                                    <thead className="bg-surface-subtle text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        <tr>
+                                            <th className="px-5 py-4">Visit</th>
+                                            <th className="px-5 py-4">
+                                                Occurred
+                                            </th>
+                                            <th className="px-5 py-4">
+                                                Status
+                                            </th>
+                                            <th className="px-5 py-4 text-right">
+                                                Action
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {recentVisits.map((visit) => (
+                                            <tr key={visit.id}>
+                                                <td className="px-5 py-4 font-medium text-brand-primary tabular-nums">
+                                                    {visit.visitNumber}
+                                                </td>
+                                                <td className="px-5 py-4 text-text-secondary">
+                                                    {formatDateTime(
+                                                        visit.occurredAt,
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <StatusBadge tone="info">
+                                                        {visit.status.label}
+                                                    </StatusBadge>
+                                                </td>
+                                                <td className="px-5 py-4 text-right">
+                                                    <Link
+                                                        className={
+                                                            textLinkStyles
+                                                        }
+                                                        href={showVisit(
+                                                            visit.id,
+                                                        )}
+                                                    >
+                                                        View
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                    </Panel>
+                ) : null}
             </PageContainer>
         </>
     );

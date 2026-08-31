@@ -8,6 +8,7 @@ use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
 use App\Models\Patient;
 use App\Models\User;
+use App\Models\Visit;
 use App\PatientSex;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -107,9 +108,30 @@ class PatientController extends Controller
     public function show(Request $request, Patient $patient): Response
     {
         $status = $request->session()->get('status');
+        $recentVisits = ($request->user()?->can('viewAny', Visit::class) ?? false)
+            ? Visit::query()
+                ->whereBelongsTo($patient)
+                ->select(['id', 'patient_id', 'visit_number', 'occurred_at', 'status'])
+                ->orderByDesc('occurred_at')
+                ->orderByDesc('id')
+                ->limit(5)
+                ->get()
+                ->map(fn (Visit $visit): array => [
+                    'id' => $visit->id,
+                    'visitNumber' => $visit->visit_number,
+                    'occurredAt' => $visit->occurred_at->toIso8601String(),
+                    'status' => [
+                        'value' => $visit->status->value,
+                        'label' => $visit->status->displayName(),
+                    ],
+                    'nextStep' => $visit->status->handoffLabel(),
+                ])
+                ->values()
+            : collect();
 
         return Inertia::render('patients/show', [
             'patient' => $this->patientData($patient),
+            'recentVisits' => $recentVisits,
             'status' => is_string($status) ? $status : null,
         ]);
     }

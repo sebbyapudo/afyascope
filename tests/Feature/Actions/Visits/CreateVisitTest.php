@@ -70,7 +70,7 @@ it('creates multiple distinct Visits for one returning Patient without duplicati
         ]);
 });
 
-it('rejects a Visit number or status supplied through normal creation input', function (array $attributes) {
+it('rejects controlled Visit values supplied through normal creation input', function (array $attributes) {
     $actor = User::factory()->forRole(StaffRole::Receptionist)->create();
     $patient = Patient::factory()->create();
 
@@ -85,6 +85,8 @@ it('rejects a Visit number or status supplied through normal creation input', fu
 })->with([
     'manual reference' => [['visit_number' => 'VIS-MANUAL']],
     'premature status' => [['status' => 'financially-cleared']],
+    'primary key' => [['id' => 999999]],
+    'Patient foreign key' => [['patient_id' => 999999]],
 ]);
 
 it('rejects an unsaved Patient without creating a Visit or false audit event', function () {

@@ -4,6 +4,7 @@ import { dashboard } from '@/routes';
 import { index as auditLogIndex } from '@/routes/audit-logs';
 import { index as patientIndex } from '@/routes/patients';
 import { index as staffIndex } from '@/routes/staff';
+import { index as visitIndex } from '@/routes/visits';
 import type { Capabilities } from '@/types';
 
 type AppNavigationProps = {
@@ -48,6 +49,12 @@ export function navigationItems(
             href: patientIndex(),
             label: 'Patients',
             visible: capabilities.viewPatients,
+        },
+        {
+            active: isCurrentPath(currentUrl, visitIndex.url(), true),
+            href: visitIndex(),
+            label: 'Visits',
+            visible: capabilities.viewVisits,
         },
         {
             active: isCurrentPath(currentUrl, staffIndex.url(), true),
