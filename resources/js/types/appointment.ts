@@ -18,7 +18,7 @@ export type AppointmentSummary = {
     patient: AppointmentPatient;
 };
 
-export type UpcomingAppointment = Omit<
+export type PatientAppointmentHistoryItem = Omit<
     AppointmentSummary,
     'isScheduled' | 'patient'
 >;

@@ -5,7 +5,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
-import { cancel, edit, index, noShow } from '@/routes/appointments';
+import { cancel, edit, noShow } from '@/routes/appointments';
 import { show as showPatient } from '@/routes/patients';
 import type { AppointmentStatus, AppointmentSummary } from '@/types';
 
@@ -54,8 +54,11 @@ export default function ShowAppointment({
                         ) : null
                     }
                     backLink={
-                        <Link className={textLinkStyles} href={index()}>
-                            Back to appointment registry
+                        <Link
+                            className={textLinkStyles}
+                            href={showPatient(appointment.patient.id)}
+                        >
+                            Back to Patient profile
                         </Link>
                     }
                     description="Administrative scheduling record"

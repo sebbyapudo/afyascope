@@ -23,6 +23,21 @@ export type PatientDetails = PatientSummary & {
     createdAt: string | null;
 };
 
+export type PatientHistoryPage<T> = {
+    data: T[];
+    pagination: {
+        currentPage: number;
+        from: number | null;
+        lastPage: number;
+        nextPageUrl: string | null;
+        pageName: string;
+        perPage: number;
+        previousPageUrl: string | null;
+        to: number | null;
+        total: number;
+    };
+};
+
 export type PatientPage = {
     data: PatientSummary[];
     pagination: {

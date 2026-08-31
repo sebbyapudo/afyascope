@@ -203,7 +203,7 @@ it('shows only administrative Visit data and the approved next handoff label', f
         );
 });
 
-it('integrates five most recent Visits into the Patient profile in deterministic order', function () {
+it('integrates Patient Visits into the profile in deterministic newest-first order', function () {
     $receptionist = visitManagementReceptionist();
     $patient = Patient::factory()->create();
     $otherPatient = Patient::factory()->create();
@@ -216,9 +216,10 @@ it('integrates five most recent Visits into the Patient profile in deterministic
     $this->actingAs($receptionist)
         ->get(route('patients.show', $patient))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('recentVisits', 5)
-            ->where('recentVisits', fn ($recentVisits): bool => collect($recentVisits)
-                ->pluck('id')->all() === $expectedIds)
+            ->has('visitHistory.data', 6)
+            ->where('visitHistory.data', fn ($visitHistory): bool => collect($visitHistory)
+                ->pluck('id')->take(5)->all() === $expectedIds)
+            ->where('visitHistory.pagination.total', 6)
             ->missing('patient.visits')
         );
 });

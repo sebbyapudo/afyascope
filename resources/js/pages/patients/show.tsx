@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ActionLink, textLinkStyles } from '@/components/ui/button';
+import { EmptyState } from '@/components/ui/empty-state';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
@@ -10,13 +11,26 @@ import { edit, index } from '@/routes/patients';
 import { create as createAppointment } from '@/routes/patients/appointments';
 import { create as createVisit } from '@/routes/patients/visits';
 import { show as showVisit } from '@/routes/visits';
-import type { PatientDetails, RecentVisit, UpcomingAppointment } from '@/types';
+import type {
+    AppointmentStatus,
+    PatientAppointmentHistoryItem,
+    PatientDetails,
+    PatientHistoryPage,
+    PatientVisitHistoryItem,
+} from '@/types';
 
 type ShowPatientProps = {
+    appointmentHistory: PatientHistoryPage<PatientAppointmentHistoryItem> | null;
     patient: PatientDetails;
-    recentVisits: RecentVisit[];
-    upcomingAppointments: UpcomingAppointment[];
+    pastUnresolvedAppointments: PatientHistoryPage<PatientAppointmentHistoryItem> | null;
     status?: string | null;
+    upcomingAppointments: PatientHistoryPage<PatientAppointmentHistoryItem> | null;
+    visitHistory: PatientHistoryPage<PatientVisitHistoryItem> | null;
+};
+
+type HistoryPaginationProps = {
+    label: string;
+    pagination: PatientHistoryPage<unknown>['pagination'];
 };
 
 function formatDate(date: string | null): string {
@@ -36,14 +50,66 @@ function formatDateTime(date: string): string {
     }).format(new Date(date));
 }
 
+function appointmentStatusTone(status: AppointmentStatus['value']) {
+    if (status === 'cancelled') {
+        return 'danger' as const;
+    }
+
+    if (status === 'no_show') {
+        return 'warning' as const;
+    }
+
+    return 'info' as const;
+}
+
+function HistoryPagination({ label, pagination }: HistoryPaginationProps) {
+    if (pagination.total === 0) {
+        return null;
+    }
+
+    return (
+        <footer className="flex flex-wrap items-center justify-between gap-4 border-t border-border px-5 py-4 text-sm text-text-secondary">
+            <p className="tabular-nums">
+                Page {pagination.currentPage} of {pagination.lastPage} · Showing{' '}
+                {pagination.from}–{pagination.to} of {pagination.total}
+            </p>
+            {pagination.lastPage > 1 ? (
+                <nav aria-label={label} className="flex items-center gap-2">
+                    {pagination.previousPageUrl ? (
+                        <ActionLink
+                            href={pagination.previousPageUrl}
+                            size="small"
+                            variant="secondary"
+                        >
+                            Previous
+                        </ActionLink>
+                    ) : null}
+                    {pagination.nextPageUrl ? (
+                        <ActionLink
+                            href={pagination.nextPageUrl}
+                            size="small"
+                            variant="secondary"
+                        >
+                            Next
+                        </ActionLink>
+                    ) : null}
+                </nav>
+            ) : null}
+        </footer>
+    );
+}
+
 export default function ShowPatient({
+    appointmentHistory,
     patient,
-    recentVisits,
+    pastUnresolvedAppointments,
     status,
     upcomingAppointments,
+    visitHistory,
 }: ShowPatientProps) {
     const { props } = usePage();
     const fields = [
+        ['Patient reference', patient.patientNumber],
         ['Full name', patient.name],
         ['Date of birth', formatDate(patient.dateOfBirth)],
         ['Sex', patient.sex?.label ?? 'Not recorded'],
@@ -51,11 +117,9 @@ export default function ShowPatient({
         ['Email address', patient.email ?? 'Not recorded'],
         ['Address', patient.address ?? 'Not recorded'],
         [
-            'Registered',
+            'Registered at',
             patient.createdAt
-                ? new Intl.DateTimeFormat(undefined, {
-                      dateStyle: 'long',
-                  }).format(new Date(patient.createdAt))
+                ? formatDateTime(patient.createdAt)
                 : 'Not recorded',
         ],
     ];
@@ -63,7 +127,7 @@ export default function ShowPatient({
     return (
         <>
             <Head title={patient.patientNumber} />
-            <PageContainer>
+            <PageContainer width="wide">
                 <PageHeader
                     actions={
                         <div className="flex flex-wrap gap-3">
@@ -95,7 +159,7 @@ export default function ShowPatient({
                             Back to Patient registry
                         </Link>
                     }
-                    description="Administrative Patient profile"
+                    description="Demographics, contact information, Visits, and appointment history"
                     eyebrow={patient.patientNumber}
                     title={patient.name}
                 />
@@ -111,9 +175,12 @@ export default function ShowPatient({
 
                 <Panel className="p-5 sm:p-8">
                     <h2 className="text-lg font-semibold text-text">
-                        Demographics and contact
+                        Administrative profile
                     </h2>
-                    <dl className="mt-6 grid gap-x-8 gap-y-6 sm:grid-cols-2">
+                    <p className="mt-1 text-sm text-text-secondary">
+                        Current registration, demographic, and contact details.
+                    </p>
+                    <dl className="mt-6 grid gap-x-8 gap-y-6 sm:grid-cols-2 lg:grid-cols-4">
                         {fields.map(([label, value]) => (
                             <div key={label}>
                                 <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
@@ -127,25 +194,154 @@ export default function ShowPatient({
                     </dl>
                 </Panel>
 
-                {props.auth.capabilities.viewAppointments ? (
-                    <Panel className="overflow-hidden">
+                {props.auth.capabilities.viewVisits && visitHistory ? (
+                    <Panel
+                        className="scroll-mt-6 overflow-hidden"
+                        id="visit-history"
+                    >
+                        <div className="border-b border-border px-5 py-4">
+                            <h2 className="text-lg font-semibold text-text">
+                                Visit history
+                            </h2>
+                            <p className="mt-1 text-sm text-text-secondary">
+                                Attendance episodes ordered from newest to
+                                oldest.
+                            </p>
+                        </div>
+                        {visitHistory.data.length === 0 ? (
+                            <EmptyState
+                                action={
+                                    props.auth.capabilities.createVisits ? (
+                                        <ActionLink
+                                            href={createVisit(patient.id)}
+                                        >
+                                            Start new Visit
+                                        </ActionLink>
+                                    ) : null
+                                }
+                                description="A Visit records an actual attendance at the clinic."
+                                title="No Visits recorded"
+                            />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-4xl text-left text-sm">
+                                    <thead className="bg-surface-subtle text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        <tr>
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Visit
+                                            </th>
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Occurred
+                                            </th>
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Status
+                                            </th>
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Current workflow
+                                            </th>
+                                            <th
+                                                className="px-5 py-4 text-right"
+                                                scope="col"
+                                            >
+                                                Action
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {visitHistory.data.map((visit) => (
+                                            <tr key={visit.id}>
+                                                <td className="px-5 py-4 font-medium text-brand-primary tabular-nums">
+                                                    {visit.visitNumber}
+                                                </td>
+                                                <td className="px-5 py-4 text-text-secondary">
+                                                    <time
+                                                        dateTime={
+                                                            visit.occurredAt
+                                                        }
+                                                    >
+                                                        {formatDateTime(
+                                                            visit.occurredAt,
+                                                        )}
+                                                    </time>
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <StatusBadge tone="info">
+                                                        {visit.status.label}
+                                                    </StatusBadge>
+                                                </td>
+                                                <td className="px-5 py-4 text-text-secondary">
+                                                    {visit.nextStep}
+                                                </td>
+                                                <td className="px-5 py-4 text-right">
+                                                    <Link
+                                                        className={
+                                                            textLinkStyles
+                                                        }
+                                                        href={showVisit(
+                                                            visit.id,
+                                                        )}
+                                                    >
+                                                        View Visit
+                                                    </Link>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        <HistoryPagination
+                            label="Patient Visit history pagination"
+                            pagination={visitHistory.pagination}
+                        />
+                    </Panel>
+                ) : null}
+
+                {props.auth.capabilities.viewAppointments &&
+                upcomingAppointments ? (
+                    <Panel
+                        className="scroll-mt-6 overflow-hidden"
+                        id="upcoming-appointments"
+                    >
                         <div className="border-b border-border px-5 py-4">
                             <h2 className="text-lg font-semibold text-text">
                                 Upcoming appointments
                             </h2>
                             <p className="mt-1 text-sm text-text-secondary">
-                                The next five scheduled appointments for this
-                                Patient.
+                                Future scheduled attendances ordered by the
+                                nearest date.
                             </p>
                         </div>
-                        {upcomingAppointments.length === 0 ? (
-                            <div className="px-5 py-8 text-sm text-text-secondary">
-                                No upcoming appointments are scheduled for this
-                                Patient.
-                            </div>
+                        {upcomingAppointments.data.length === 0 ? (
+                            <EmptyState
+                                action={
+                                    props.auth.capabilities
+                                        .createAppointments ? (
+                                        <ActionLink
+                                            href={createAppointment(patient.id)}
+                                        >
+                                            Schedule appointment
+                                        </ActionLink>
+                                    ) : null
+                                }
+                                description="Appointments are scheduling records and do not create Visits."
+                                title="No upcoming appointments"
+                            />
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-2xl text-left text-sm">
+                                <table className="w-full min-w-3xl text-left text-sm">
                                     <thead className="bg-surface-subtle text-xs font-semibold tracking-wide text-text-secondary uppercase">
                                         <tr>
                                             <th
@@ -175,7 +371,7 @@ export default function ShowPatient({
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {upcomingAppointments.map(
+                                        {upcomingAppointments.data.map(
                                             (appointment) => (
                                                 <tr key={appointment.id}>
                                                     <td className="px-5 py-4 font-medium text-brand-primary tabular-nums">
@@ -184,9 +380,15 @@ export default function ShowPatient({
                                                         }
                                                     </td>
                                                     <td className="px-5 py-4 text-text-secondary">
-                                                        {formatDateTime(
-                                                            appointment.scheduledAt,
-                                                        )}
+                                                        <time
+                                                            dateTime={
+                                                                appointment.scheduledAt
+                                                            }
+                                                        >
+                                                            {formatDateTime(
+                                                                appointment.scheduledAt,
+                                                            )}
+                                                        </time>
                                                     </td>
                                                     <td className="px-5 py-4">
                                                         <StatusBadge tone="info">
@@ -206,7 +408,7 @@ export default function ShowPatient({
                                                                 appointment.id,
                                                             )}
                                                         >
-                                                            View
+                                                            View appointment
                                                         </Link>
                                                     </td>
                                                 </tr>
@@ -216,75 +418,229 @@ export default function ShowPatient({
                                 </table>
                             </div>
                         )}
+                        <HistoryPagination
+                            label="Upcoming appointment pagination"
+                            pagination={upcomingAppointments.pagination}
+                        />
                     </Panel>
                 ) : null}
 
-                {props.auth.capabilities.viewVisits ? (
-                    <Panel className="overflow-hidden">
+                {props.auth.capabilities.viewAppointments &&
+                pastUnresolvedAppointments ? (
+                    <Panel
+                        className="scroll-mt-6 overflow-hidden"
+                        id="past-unresolved-appointments"
+                    >
                         <div className="border-b border-border px-5 py-4">
                             <h2 className="text-lg font-semibold text-text">
-                                Recent Visits
+                                Past unresolved appointments
                             </h2>
                             <p className="mt-1 text-sm text-text-secondary">
-                                The five most recent attendance episodes for
-                                this Patient.
+                                Past scheduled appointments that have not been
+                                cancelled or marked as no-show, ordered from the
+                                most recent.
                             </p>
                         </div>
-                        {recentVisits.length === 0 ? (
-                            <div className="px-5 py-8 text-sm text-text-secondary">
-                                No Visits have been created for this Patient.
-                            </div>
+                        {pastUnresolvedAppointments.data.length === 0 ? (
+                            <EmptyState
+                                description="Past scheduled appointments requiring administrative review will appear here."
+                                title="No past unresolved appointments"
+                            />
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-2xl text-left text-sm">
+                                <table className="w-full min-w-3xl text-left text-sm">
                                     <thead className="bg-surface-subtle text-xs font-semibold tracking-wide text-text-secondary uppercase">
                                         <tr>
-                                            <th className="px-5 py-4">Visit</th>
-                                            <th className="px-5 py-4">
-                                                Occurred
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Appointment
                                             </th>
-                                            <th className="px-5 py-4">
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Scheduled for
+                                            </th>
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
                                                 Status
                                             </th>
-                                            <th className="px-5 py-4 text-right">
+                                            <th
+                                                className="px-5 py-4 text-right"
+                                                scope="col"
+                                            >
                                                 Action
                                             </th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-border">
-                                        {recentVisits.map((visit) => (
-                                            <tr key={visit.id}>
-                                                <td className="px-5 py-4 font-medium text-brand-primary tabular-nums">
-                                                    {visit.visitNumber}
-                                                </td>
-                                                <td className="px-5 py-4 text-text-secondary">
-                                                    {formatDateTime(
-                                                        visit.occurredAt,
-                                                    )}
-                                                </td>
-                                                <td className="px-5 py-4">
-                                                    <StatusBadge tone="info">
-                                                        {visit.status.label}
-                                                    </StatusBadge>
-                                                </td>
-                                                <td className="px-5 py-4 text-right">
-                                                    <Link
-                                                        className={
-                                                            textLinkStyles
+                                        {pastUnresolvedAppointments.data.map(
+                                            (appointment) => (
+                                                <tr key={appointment.id}>
+                                                    <td className="px-5 py-4 font-medium text-brand-primary tabular-nums">
+                                                        {
+                                                            appointment.appointmentNumber
                                                         }
-                                                        href={showVisit(
-                                                            visit.id,
-                                                        )}
-                                                    >
-                                                        View
-                                                    </Link>
-                                                </td>
-                                            </tr>
-                                        ))}
+                                                    </td>
+                                                    <td className="px-5 py-4 text-text-secondary">
+                                                        <time
+                                                            dateTime={
+                                                                appointment.scheduledAt
+                                                            }
+                                                        >
+                                                            {formatDateTime(
+                                                                appointment.scheduledAt,
+                                                            )}
+                                                        </time>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <StatusBadge tone="info">
+                                                            {
+                                                                appointment
+                                                                    .status
+                                                                    .label
+                                                            }
+                                                        </StatusBadge>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-right">
+                                                        <Link
+                                                            className={
+                                                                textLinkStyles
+                                                            }
+                                                            href={showAppointment(
+                                                                appointment.id,
+                                                            )}
+                                                        >
+                                                            View appointment
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            ),
+                                        )}
                                     </tbody>
                                 </table>
                             </div>
                         )}
+                        <HistoryPagination
+                            label="Past unresolved appointment pagination"
+                            pagination={pastUnresolvedAppointments.pagination}
+                        />
+                    </Panel>
+                ) : null}
+
+                {props.auth.capabilities.viewAppointments &&
+                appointmentHistory ? (
+                    <Panel
+                        className="scroll-mt-6 overflow-hidden"
+                        id="appointment-history"
+                    >
+                        <div className="border-b border-border px-5 py-4">
+                            <h2 className="text-lg font-semibold text-text">
+                                Cancelled and no-show appointments
+                            </h2>
+                            <p className="mt-1 text-sm text-text-secondary">
+                                Historical scheduling outcomes ordered from
+                                newest to oldest.
+                            </p>
+                        </div>
+                        {appointmentHistory.data.length === 0 ? (
+                            <EmptyState
+                                description="Cancelled and no-show appointments remain visible here as administrative history."
+                                title="No historical appointment outcomes"
+                            />
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full min-w-3xl text-left text-sm">
+                                    <thead className="bg-surface-subtle text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        <tr>
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Appointment
+                                            </th>
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Scheduled for
+                                            </th>
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Outcome
+                                            </th>
+                                            <th
+                                                className="px-5 py-4 text-right"
+                                                scope="col"
+                                            >
+                                                Action
+                                            </th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-border">
+                                        {appointmentHistory.data.map(
+                                            (appointment) => (
+                                                <tr key={appointment.id}>
+                                                    <td className="px-5 py-4 font-medium text-brand-primary tabular-nums">
+                                                        {
+                                                            appointment.appointmentNumber
+                                                        }
+                                                    </td>
+                                                    <td className="px-5 py-4 text-text-secondary">
+                                                        <time
+                                                            dateTime={
+                                                                appointment.scheduledAt
+                                                            }
+                                                        >
+                                                            {formatDateTime(
+                                                                appointment.scheduledAt,
+                                                            )}
+                                                        </time>
+                                                    </td>
+                                                    <td className="px-5 py-4">
+                                                        <StatusBadge
+                                                            tone={appointmentStatusTone(
+                                                                appointment
+                                                                    .status
+                                                                    .value,
+                                                            )}
+                                                        >
+                                                            {
+                                                                appointment
+                                                                    .status
+                                                                    .label
+                                                            }
+                                                        </StatusBadge>
+                                                    </td>
+                                                    <td className="px-5 py-4 text-right">
+                                                        <Link
+                                                            className={
+                                                                textLinkStyles
+                                                            }
+                                                            href={showAppointment(
+                                                                appointment.id,
+                                                            )}
+                                                        >
+                                                            View appointment
+                                                        </Link>
+                                                    </td>
+                                                </tr>
+                                            ),
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+                        <HistoryPagination
+                            label="Historical appointment pagination"
+                            pagination={appointmentHistory.pagination}
+                        />
                     </Panel>
                 ) : null}
             </PageContainer>

@@ -15,6 +15,7 @@ use App\PatientSex;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -110,52 +111,21 @@ class PatientController extends Controller
     public function show(Request $request, Patient $patient): Response
     {
         $status = $request->session()->get('status');
-        $recentVisits = ($request->user()?->can('viewAny', Visit::class) ?? false)
-            ? Visit::query()
-                ->whereBelongsTo($patient)
-                ->select(['id', 'patient_id', 'visit_number', 'occurred_at', 'status'])
-                ->orderByDesc('occurred_at')
-                ->orderByDesc('id')
-                ->limit(5)
-                ->get()
-                ->map(fn (Visit $visit): array => [
-                    'id' => $visit->id,
-                    'visitNumber' => $visit->visit_number,
-                    'occurredAt' => $visit->occurred_at->toIso8601String(),
-                    'status' => [
-                        'value' => $visit->status->value,
-                        'label' => $visit->status->displayName(),
-                    ],
-                    'nextStep' => $visit->status->handoffLabel(),
-                ])
-                ->values()
-            : collect();
-        $upcomingAppointments = ($request->user()?->can('viewAny', Appointment::class) ?? false)
-            ? Appointment::query()
-                ->whereBelongsTo($patient)
-                ->where('status', AppointmentStatus::Scheduled)
-                ->where('scheduled_at', '>=', now())
-                ->select(['id', 'patient_id', 'appointment_number', 'scheduled_at', 'status'])
-                ->orderBy('scheduled_at')
-                ->orderBy('id')
-                ->limit(5)
-                ->get()
-                ->map(fn (Appointment $appointment): array => [
-                    'id' => $appointment->id,
-                    'appointmentNumber' => $appointment->appointment_number,
-                    'scheduledAt' => $appointment->scheduled_at->toIso8601String(),
-                    'status' => [
-                        'value' => $appointment->status->value,
-                        'label' => $appointment->status->displayName(),
-                    ],
-                ])
-                ->values()
-            : collect();
+        $canViewVisits = $request->user()?->can('viewAny', Visit::class) ?? false;
+        $canViewAppointments = $request->user()?->can('viewAny', Appointment::class) ?? false;
 
         return Inertia::render('patients/show', [
             'patient' => $this->patientData($patient),
-            'recentVisits' => $recentVisits,
-            'upcomingAppointments' => $upcomingAppointments,
+            'visitHistory' => $canViewVisits ? $this->visitHistory($patient) : null,
+            'upcomingAppointments' => $canViewAppointments
+                ? $this->upcomingAppointments($patient)
+                : null,
+            'pastUnresolvedAppointments' => $canViewAppointments
+                ? $this->pastUnresolvedAppointments($patient)
+                : null,
+            'appointmentHistory' => $canViewAppointments
+                ? $this->appointmentHistory($patient)
+                : null,
             'status' => is_string($status) ? $status : null,
         ]);
     }
@@ -242,6 +212,154 @@ class PatientController extends Controller
             $patient->middle_name,
             $patient->last_name,
         ])->filter()->implode(' ');
+    }
+
+    /**
+     * @return array{data: list<array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string}>, pagination: array{currentPage: int, from: int|null, lastPage: int, nextPageUrl: string|null, pageName: string, perPage: int, previousPageUrl: string|null, to: int|null, total: int}}
+     */
+    private function visitHistory(Patient $patient): array
+    {
+        $visits = Visit::query()
+            ->whereBelongsTo($patient)
+            ->select(['id', 'patient_id', 'visit_number', 'occurred_at', 'status'])
+            ->orderByDesc('occurred_at')
+            ->orderByDesc('id')
+            ->paginate(10, ['*'], 'visits_page')
+            ->withQueryString()
+            ->fragment('visit-history');
+
+        return [
+            'data' => array_values(
+                $visits->getCollection()
+                    ->map(fn (Visit $visit): array => [
+                        'id' => $visit->id,
+                        'visitNumber' => $visit->visit_number,
+                        'occurredAt' => $visit->occurred_at->toIso8601String(),
+                        'status' => [
+                            'value' => $visit->status->value,
+                            'label' => $visit->status->displayName(),
+                        ],
+                        'nextStep' => $visit->status->handoffLabel(),
+                    ])
+                    ->all(),
+            ),
+            'pagination' => $this->paginationData($visits),
+        ];
+    }
+
+    /**
+     * @return array{data: list<array{id: int, appointmentNumber: string, scheduledAt: string, status: array{value: string, label: string}}>, pagination: array{currentPage: int, from: int|null, lastPage: int, nextPageUrl: string|null, pageName: string, perPage: int, previousPageUrl: string|null, to: int|null, total: int}}
+     */
+    private function upcomingAppointments(Patient $patient): array
+    {
+        $appointments = Appointment::query()
+            ->whereBelongsTo($patient)
+            ->where('status', AppointmentStatus::Scheduled->value)
+            ->where('scheduled_at', '>=', now())
+            ->select(['id', 'patient_id', 'appointment_number', 'scheduled_at', 'status'])
+            ->orderBy('scheduled_at')
+            ->orderBy('id')
+            ->paginate(5, ['*'], 'upcoming_appointments_page')
+            ->withQueryString()
+            ->fragment('upcoming-appointments');
+
+        return [
+            'data' => array_values(
+                $appointments->getCollection()
+                    ->map(fn (Appointment $appointment): array => $this->patientAppointmentData($appointment))
+                    ->all(),
+            ),
+            'pagination' => $this->paginationData($appointments),
+        ];
+    }
+
+    /**
+     * @return array{data: list<array{id: int, appointmentNumber: string, scheduledAt: string, status: array{value: string, label: string}}>, pagination: array{currentPage: int, from: int|null, lastPage: int, nextPageUrl: string|null, pageName: string, perPage: int, previousPageUrl: string|null, to: int|null, total: int}}
+     */
+    private function pastUnresolvedAppointments(Patient $patient): array
+    {
+        $appointments = Appointment::query()
+            ->whereBelongsTo($patient)
+            ->where('status', AppointmentStatus::Scheduled->value)
+            ->where('scheduled_at', '<', now())
+            ->select(['id', 'patient_id', 'appointment_number', 'scheduled_at', 'status'])
+            ->orderByDesc('scheduled_at')
+            ->orderByDesc('id')
+            ->paginate(10, ['*'], 'past_unresolved_appointments_page')
+            ->withQueryString()
+            ->fragment('past-unresolved-appointments');
+
+        return [
+            'data' => array_values(
+                $appointments->getCollection()
+                    ->map(fn (Appointment $appointment): array => $this->patientAppointmentData($appointment))
+                    ->all(),
+            ),
+            'pagination' => $this->paginationData($appointments),
+        ];
+    }
+
+    /**
+     * @return array{data: list<array{id: int, appointmentNumber: string, scheduledAt: string, status: array{value: string, label: string}}>, pagination: array{currentPage: int, from: int|null, lastPage: int, nextPageUrl: string|null, pageName: string, perPage: int, previousPageUrl: string|null, to: int|null, total: int}}
+     */
+    private function appointmentHistory(Patient $patient): array
+    {
+        $appointments = Appointment::query()
+            ->whereBelongsTo($patient)
+            ->whereIn('status', [
+                AppointmentStatus::Cancelled->value,
+                AppointmentStatus::NoShow->value,
+            ])
+            ->select(['id', 'patient_id', 'appointment_number', 'scheduled_at', 'status'])
+            ->orderByDesc('scheduled_at')
+            ->orderByDesc('id')
+            ->paginate(10, ['*'], 'appointment_history_page')
+            ->withQueryString()
+            ->fragment('appointment-history');
+
+        return [
+            'data' => array_values(
+                $appointments->getCollection()
+                    ->map(fn (Appointment $appointment): array => $this->patientAppointmentData($appointment))
+                    ->all(),
+            ),
+            'pagination' => $this->paginationData($appointments),
+        ];
+    }
+
+    /**
+     * @return array{id: int, appointmentNumber: string, scheduledAt: string, status: array{value: string, label: string}}
+     */
+    private function patientAppointmentData(Appointment $appointment): array
+    {
+        return [
+            'id' => $appointment->id,
+            'appointmentNumber' => $appointment->appointment_number,
+            'scheduledAt' => $appointment->scheduled_at->toIso8601String(),
+            'status' => [
+                'value' => $appointment->status->value,
+                'label' => $appointment->status->displayName(),
+            ],
+        ];
+    }
+
+    /**
+     * @param  LengthAwarePaginator<int, mixed>  $paginator
+     * @return array{currentPage: int, from: int|null, lastPage: int, nextPageUrl: string|null, pageName: string, perPage: int, previousPageUrl: string|null, to: int|null, total: int}
+     */
+    private function paginationData(LengthAwarePaginator $paginator): array
+    {
+        return [
+            'currentPage' => $paginator->currentPage(),
+            'from' => $paginator->firstItem(),
+            'lastPage' => $paginator->lastPage(),
+            'nextPageUrl' => $paginator->nextPageUrl(),
+            'pageName' => $paginator->getPageName(),
+            'perPage' => $paginator->perPage(),
+            'previousPageUrl' => $paginator->previousPageUrl(),
+            'to' => $paginator->lastItem(),
+            'total' => $paginator->total(),
+        ];
     }
 
     /**

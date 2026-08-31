@@ -6,7 +6,6 @@ import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { show as showPatient } from '@/routes/patients';
-import { index } from '@/routes/visits';
 import type { VisitSummary } from '@/types';
 
 type ShowVisitProps = { status?: string | null; visit: VisitSummary };
@@ -25,8 +24,11 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
             <PageContainer>
                 <PageHeader
                     backLink={
-                        <Link className={textLinkStyles} href={index()}>
-                            Back to Visit registry
+                        <Link
+                            className={textLinkStyles}
+                            href={showPatient(visit.patient.id)}
+                        >
+                            Back to Patient profile
                         </Link>
                     }
                     description="Administrative Visit record"

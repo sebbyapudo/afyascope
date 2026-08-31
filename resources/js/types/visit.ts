@@ -18,7 +18,7 @@ export type VisitSummary = {
     patient: VisitPatient;
 };
 
-export type RecentVisit = Omit<VisitSummary, 'patient'>;
+export type PatientVisitHistoryItem = Omit<VisitSummary, 'patient'>;
 
 export type VisitPage = {
     data: VisitSummary[];

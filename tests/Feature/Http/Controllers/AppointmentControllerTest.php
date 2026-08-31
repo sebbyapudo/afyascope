@@ -238,8 +238,9 @@ it('integrates five nearest upcoming scheduled Appointments into the Patient pro
         $expectedIds = $appointments->sortBy('scheduled_at')->take(5)->pluck('id')->values()->all();
 
         $this->actingAs($receptionist)->get(route('patients.show', $patient))
-            ->assertInertia(fn (Assert $page) => $page->has('upcomingAppointments', 5)
-                ->where('upcomingAppointments', fn ($upcoming): bool => collect($upcoming)->pluck('id')->all() === $expectedIds)
+            ->assertInertia(fn (Assert $page) => $page->has('upcomingAppointments.data', 5)
+                ->where('upcomingAppointments.data', fn ($upcoming): bool => collect($upcoming)->pluck('id')->all() === $expectedIds)
+                ->where('upcomingAppointments.pagination.total', 6)
                 ->missing('patient.appointments'));
     });
 });

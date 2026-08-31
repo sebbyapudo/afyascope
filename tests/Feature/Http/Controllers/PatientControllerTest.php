@@ -1,11 +1,15 @@
 <?php
 
+use App\AppointmentStatus;
 use App\AuditAction;
+use App\Models\Appointment;
 use App\Models\AuditLog;
 use App\Models\Patient;
 use App\Models\User;
+use App\Models\Visit;
 use App\PatientSex;
 use App\StaffRole;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 
@@ -24,7 +28,12 @@ it('allows a Receptionist to access every delivered Patient page', function () {
     $this->actingAs($receptionist)
         ->get(route('patients.show', $patient))
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->component('patients/show'));
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('patients/show')
+            ->where('auth.capabilities.updatePatients', true)
+            ->where('auth.capabilities.createVisits', true)
+            ->where('auth.capabilities.createAppointments', true)
+        );
     $this->actingAs($receptionist)
         ->get(route('patients.edit', $patient))
         ->assertOk()
@@ -260,25 +269,253 @@ it('does not block or merge a legitimate duplicate-like Patient', function () {
         ->and(Patient::query()->distinct()->count('patient_number'))->toBe(2);
 });
 
-it('shows only the current administrative Patient data', function () {
+it('shows the complete administrative Patient profile with empty histories', function () {
     $receptionist = patientRegistryReceptionist();
     $patient = Patient::factory()->create([
         'first_name' => 'Amina',
         'middle_name' => 'Wanjiku',
         'last_name' => 'Kamau',
+        'date_of_birth' => '1990-04-12',
+        'sex' => PatientSex::Female,
+        'phone' => '+254700123456',
+        'email' => 'amina@example.com',
+        'address' => 'Nairobi',
     ]);
 
     $this->actingAs($receptionist)
         ->get(route('patients.show', $patient))
         ->assertInertia(fn (Assert $page) => $page
+            ->component('patients/show')
             ->where('patient.id', $patient->id)
             ->where('patient.patientNumber', $patient->patient_number)
             ->where('patient.name', 'Amina Wanjiku Kamau')
+            ->where('patient.dateOfBirth', '1990-04-12')
+            ->where('patient.sex', ['value' => 'female', 'label' => 'Female'])
+            ->where('patient.phone', '+254700123456')
+            ->where('patient.email', 'amina@example.com')
+            ->where('patient.address', 'Nairobi')
+            ->where('patient.createdAt', $patient->created_at?->toIso8601String())
+            ->has('visitHistory.data', 0)
+            ->where('visitHistory.pagination.total', 0)
+            ->has('upcomingAppointments.data', 0)
+            ->where('upcomingAppointments.pagination.total', 0)
+            ->has('pastUnresolvedAppointments.data', 0)
+            ->where('pastUnresolvedAppointments.pagination.total', 0)
+            ->has('appointmentHistory.data', 0)
+            ->where('appointmentHistory.pagination.total', 0)
             ->missing('patient.visits')
             ->missing('patient.charges')
             ->missing('patient.payments')
             ->missing('patient.clinical')
+            ->missing('auditLogs')
+            ->missing('billing')
+            ->missing('clinical')
+            ->missing('procedures')
+            ->missing('nursing')
         );
+});
+
+it('paginates Patient Visit history newest-first without leaking another Patient', function () {
+    Carbon::withTestNow('2026-08-31 09:00:00', function (): void {
+        $receptionist = patientRegistryReceptionist();
+        $patient = Patient::factory()->create();
+        $otherPatient = Patient::factory()->create();
+        $visits = Visit::factory()->for($patient)->count(12)->sequence(
+            fn ($sequence): array => ['occurred_at' => now()->subDays($sequence->index)],
+        )->create();
+        $otherVisit = Visit::factory()->for($otherPatient)->create([
+            'occurred_at' => now()->addDay(),
+        ]);
+        $newestFirstIds = $visits->sortByDesc('occurred_at')->pluck('id')->values();
+
+        $this->actingAs($receptionist)
+            ->get(route('patients.show', $patient))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('visitHistory.data', 10)
+                ->where('visitHistory.data', fn ($history): bool => collect($history)
+                    ->pluck('id')->all() === $newestFirstIds->take(10)->all())
+                ->where('visitHistory.data.0.nextStep', 'Awaiting consultation billing')
+                ->where('visitHistory.pagination.currentPage', 1)
+                ->where('visitHistory.pagination.pageName', 'visits_page')
+                ->where('visitHistory.pagination.perPage', 10)
+                ->where('visitHistory.pagination.total', 12)
+                ->where('visitHistory.pagination.lastPage', 2)
+                ->where('visitHistory.pagination.nextPageUrl', fn (?string $url): bool => $url !== null && str_contains($url, 'visits_page=2'))
+                ->where('visitHistory.data', fn ($history): bool => ! collect($history)
+                    ->pluck('id')->contains($otherVisit->id))
+            );
+
+        $this->actingAs($receptionist)
+            ->get(route('patients.show', [$patient, 'visits_page' => 2]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('visitHistory.data', 2)
+                ->where('visitHistory.data', fn ($history): bool => collect($history)
+                    ->pluck('id')->all() === $newestFirstIds->slice(10)->values()->all())
+                ->where('visitHistory.pagination.currentPage', 2)
+                ->where('upcomingAppointments.pagination.currentPage', 1)
+                ->where('pastUnresolvedAppointments.pagination.currentPage', 1)
+                ->where('appointmentHistory.pagination.currentPage', 1)
+            );
+    });
+});
+
+it('groups and paginates Patient appointments without leaking unrelated records', function () {
+    Carbon::withTestNow('2026-08-31 09:00:00', function (): void {
+        $receptionist = patientRegistryReceptionist();
+        $patient = Patient::factory()->create();
+        $otherPatient = Patient::factory()->create();
+        $upcoming = Appointment::factory()->for($patient)->count(6)->sequence(
+            fn ($sequence): array => ['scheduled_at' => now()->addDays($sequence->index + 1)],
+        )->create();
+        $boundaryScheduled = Appointment::factory()->for($patient)->create([
+            'scheduled_at' => now(),
+        ]);
+        $pastUnresolved = Appointment::factory()->for($patient)->count(11)->sequence(
+            fn ($sequence): array => ['scheduled_at' => now()->subDays($sequence->index + 1)],
+        )->create();
+        $historical = Appointment::factory()->for($patient)->count(11)->sequence(
+            fn ($sequence): array => ['scheduled_at' => now()->subHours($sequence->index + 1)],
+        )->create();
+        $historical->each(function (Appointment $appointment, int $index): void {
+            $appointment->forceFill([
+                'status' => $index % 2 === 0
+                    ? AppointmentStatus::Cancelled
+                    : AppointmentStatus::NoShow,
+            ])->save();
+        });
+        $otherUpcoming = Appointment::factory()->for($otherPatient)->create([
+            'scheduled_at' => now()->addHour(),
+        ]);
+        $otherPastUnresolved = Appointment::factory()->for($otherPatient)->create([
+            'scheduled_at' => now()->subDay(),
+        ]);
+        $otherHistorical = Appointment::factory()->for($otherPatient)->create([
+            'scheduled_at' => now()->subHour(),
+        ]);
+        $otherHistorical->forceFill(['status' => AppointmentStatus::Cancelled])->save();
+        $upcomingIds = collect([$boundaryScheduled])
+            ->concat($upcoming)
+            ->sortBy(fn (Appointment $appointment): string => $appointment->scheduled_at->toIso8601String())
+            ->pluck('id')
+            ->values();
+        $pastUnresolvedIds = $pastUnresolved->sortByDesc('scheduled_at')->pluck('id')->values();
+        $historicalIds = $historical->sortByDesc('scheduled_at')->pluck('id')->values();
+
+        $this->actingAs($receptionist)
+            ->get(route('patients.show', $patient))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('upcomingAppointments.data', 5)
+                ->where('upcomingAppointments.data', fn ($appointments): bool => collect($appointments)
+                    ->pluck('id')->all() === $upcomingIds->take(5)->all())
+                ->where('upcomingAppointments.pagination.pageName', 'upcoming_appointments_page')
+                ->where('upcomingAppointments.pagination.perPage', 5)
+                ->where('upcomingAppointments.pagination.total', 7)
+                ->where('upcomingAppointments.pagination.nextPageUrl', fn (?string $url): bool => $url !== null && str_contains($url, 'upcoming_appointments_page=2'))
+                ->has('pastUnresolvedAppointments.data', 10)
+                ->where('pastUnresolvedAppointments.data', fn ($appointments): bool => collect($appointments)
+                    ->pluck('id')->all() === $pastUnresolvedIds->take(10)->all())
+                ->where('pastUnresolvedAppointments.data', fn ($appointments): bool => collect($appointments)
+                    ->pluck('status.value')->every(fn (string $status): bool => $status === 'scheduled'))
+                ->where('pastUnresolvedAppointments.pagination.pageName', 'past_unresolved_appointments_page')
+                ->where('pastUnresolvedAppointments.pagination.perPage', 10)
+                ->where('pastUnresolvedAppointments.pagination.total', 11)
+                ->where('pastUnresolvedAppointments.pagination.nextPageUrl', fn (?string $url): bool => $url !== null && str_contains($url, 'past_unresolved_appointments_page=2'))
+                ->has('appointmentHistory.data', 10)
+                ->where('appointmentHistory.data', fn ($appointments): bool => collect($appointments)
+                    ->pluck('id')->all() === $historicalIds->take(10)->all())
+                ->where('appointmentHistory.data', fn ($appointments): bool => collect($appointments)
+                    ->pluck('status.value')->every(
+                        fn (string $status): bool => in_array($status, ['cancelled', 'no_show'], true),
+                    ))
+                ->where('appointmentHistory.pagination.pageName', 'appointment_history_page')
+                ->where('appointmentHistory.pagination.perPage', 10)
+                ->where('appointmentHistory.pagination.total', 11)
+                ->where('upcomingAppointments.data', fn ($appointments): bool => ! collect($appointments)
+                    ->pluck('id')->contains($otherUpcoming->id))
+                ->where('pastUnresolvedAppointments.data', fn ($appointments): bool => ! collect($appointments)
+                    ->pluck('id')->contains($otherPastUnresolved->id))
+                ->where('appointmentHistory.data', fn ($appointments): bool => ! collect($appointments)
+                    ->pluck('id')->contains($otherHistorical->id))
+            );
+
+        $this->actingAs($receptionist)
+            ->get(route('patients.show', [
+                $patient,
+                'upcoming_appointments_page' => 2,
+                'past_unresolved_appointments_page' => 2,
+                'appointment_history_page' => 2,
+            ]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('upcomingAppointments.data', 2)
+                ->where('upcomingAppointments.data', fn ($appointments): bool => collect($appointments)
+                    ->pluck('id')->all() === $upcomingIds->slice(5)->values()->all())
+                ->where('upcomingAppointments.pagination.currentPage', 2)
+                ->has('pastUnresolvedAppointments.data', 1)
+                ->where('pastUnresolvedAppointments.data.0.id', $pastUnresolvedIds->last())
+                ->where('pastUnresolvedAppointments.pagination.currentPage', 2)
+                ->has('appointmentHistory.data', 1)
+                ->where('appointmentHistory.data.0.id', $historicalIds->last())
+                ->where('appointmentHistory.pagination.currentPage', 2)
+                ->where('visitHistory.pagination.currentPage', 1)
+            );
+
+        expect($pastUnresolved->every(
+            fn (Appointment $appointment): bool => $appointment->fresh()->status === AppointmentStatus::Scheduled,
+        ))->toBeTrue()
+            ->and($upcoming->count() + 1 + $pastUnresolved->count() + $historical->count())
+            ->toBe($patient->appointments()->count());
+    });
+});
+
+it('exposes only existing administrative facts in Patient histories', function () {
+    Carbon::withTestNow('2026-08-31 09:00:00', function (): void {
+        $receptionist = patientRegistryReceptionist();
+        $patient = Patient::factory()->create();
+        $visit = Visit::factory()->for($patient)->create([
+            'occurred_at' => '2026-08-30 10:30:00',
+        ]);
+        $appointment = Appointment::factory()->for($patient)->create([
+            'scheduled_at' => '2026-09-02 11:45:00',
+        ]);
+        $pastUnresolvedAppointment = Appointment::factory()->for($patient)->create([
+            'scheduled_at' => '2026-08-29 11:45:00',
+        ]);
+
+        $this->actingAs($receptionist)
+            ->get(route('patients.show', $patient))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('visitHistory.data.0', [
+                    'id' => $visit->id,
+                    'visitNumber' => $visit->visit_number,
+                    'occurredAt' => '2026-08-30T10:30:00+00:00',
+                    'status' => ['value' => 'created', 'label' => 'Created'],
+                    'nextStep' => 'Awaiting consultation billing',
+                ])
+                ->where('upcomingAppointments.data.0', [
+                    'id' => $appointment->id,
+                    'appointmentNumber' => $appointment->appointment_number,
+                    'scheduledAt' => '2026-09-02T11:45:00+00:00',
+                    'status' => ['value' => 'scheduled', 'label' => 'Scheduled'],
+                ])
+                ->where('pastUnresolvedAppointments.data.0', [
+                    'id' => $pastUnresolvedAppointment->id,
+                    'appointmentNumber' => $pastUnresolvedAppointment->appointment_number,
+                    'scheduledAt' => '2026-08-29T11:45:00+00:00',
+                    'status' => ['value' => 'scheduled', 'label' => 'Scheduled'],
+                ])
+                ->missing('visitHistory.data.0.patient')
+                ->missing('visitHistory.data.0.charges')
+                ->missing('visitHistory.data.0.clinical')
+                ->missing('upcomingAppointments.data.0.patient')
+                ->missing('upcomingAppointments.data.0.note')
+                ->missing('upcomingAppointments.data.0.visit')
+                ->missing('upcomingAppointments.data.0.billing')
+                ->missing('pastUnresolvedAppointments.data.0.patient')
+                ->missing('pastUnresolvedAppointments.data.0.note')
+                ->missing('pastUnresolvedAppointments.data.0.visit')
+                ->missing('pastUnresolvedAppointments.data.0.billing')
+            );
+    });
 });
 
 it('updates normalized Patient demographics through HTTP and audits meaningful changes', function () {
