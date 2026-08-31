@@ -17,7 +17,12 @@ import type {
 
 type AppointmentIndexProps = {
     appointments: AppointmentPage;
-    filters: { date: string; q: string; status: string };
+    filters: {
+        awaitingAttendance: boolean;
+        date: string;
+        q: string;
+        status: string;
+    };
     statusOptions: AppointmentStatusOption[];
 };
 
@@ -47,7 +52,12 @@ export default function AppointmentIndex({
 }: AppointmentIndexProps) {
     const { props } = usePage();
     const { data, pagination } = appointments;
-    const hasFilters = Boolean(filters.q || filters.date || filters.status);
+    const hasFilters = Boolean(
+        filters.q ||
+        filters.date ||
+        filters.status ||
+        filters.awaitingAttendance,
+    );
 
     return (
         <>
@@ -61,14 +71,14 @@ export default function AppointmentIndex({
                             </ActionLink>
                         ) : null
                     }
-                    description="Schedule and review Patient appointments without creating attendance Visits."
+                    description="Review scheduling history and isolate scheduled appointments still awaiting attendance."
                     title="Appointment registry"
                 />
 
                 <Panel className="p-4 sm:p-5">
                     <Form action={index()}>
                         {({ processing }) => (
-                            <div className="grid gap-4 lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_auto] lg:items-end">
+                            <div className="grid gap-4 lg:grid-cols-[minmax(16rem,1fr)_12rem_12rem_minmax(12rem,auto)_auto] lg:items-end">
                                 <div>
                                     <label
                                         className="text-sm font-medium text-text"
@@ -125,6 +135,18 @@ export default function AppointmentIndex({
                                         ))}
                                     </select>
                                 </div>
+                                <label className="flex min-h-10 items-center gap-3 rounded-control border border-border bg-surface px-3 py-2 text-sm font-medium text-text">
+                                    <input
+                                        defaultChecked={
+                                            filters.awaitingAttendance
+                                        }
+                                        className="size-4 rounded border-border text-brand-primary focus:ring-brand-primary"
+                                        name="awaiting_attendance"
+                                        type="checkbox"
+                                        value="1"
+                                    />
+                                    Awaiting attendance only
+                                </label>
                                 <div className="flex gap-3">
                                     <Button disabled={processing} type="submit">
                                         {processing ? 'Filtering…' : 'Filter'}
@@ -262,6 +284,10 @@ export default function AppointmentIndex({
                                                 date: filters.date || undefined,
                                                 status:
                                                     filters.status || undefined,
+                                                awaiting_attendance:
+                                                    filters.awaitingAttendance
+                                                        ? 1
+                                                        : undefined,
                                             },
                                         })}
                                         size="small"
@@ -281,6 +307,10 @@ export default function AppointmentIndex({
                                                 date: filters.date || undefined,
                                                 status:
                                                     filters.status || undefined,
+                                                awaiting_attendance:
+                                                    filters.awaitingAttendance
+                                                        ? 1
+                                                        : undefined,
                                             },
                                         })}
                                         size="small"

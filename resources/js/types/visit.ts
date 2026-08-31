@@ -9,16 +9,25 @@ export type VisitPatient = {
     name: string;
 };
 
+export type VisitAppointment = {
+    id: number;
+    appointmentNumber: string;
+};
+
 export type VisitSummary = {
     id: number;
     visitNumber: string;
     occurredAt: string;
     status: VisitStatus;
     nextStep: string;
+    appointment: VisitAppointment | null;
     patient: VisitPatient;
 };
 
-export type PatientVisitHistoryItem = Omit<VisitSummary, 'patient'>;
+export type PatientVisitHistoryItem = Omit<
+    VisitSummary,
+    'appointment' | 'patient'
+>;
 
 export type VisitPage = {
     data: VisitSummary[];

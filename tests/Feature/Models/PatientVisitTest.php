@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\Visit;
 use App\PatientSex;
@@ -14,6 +15,28 @@ it('defines the Patient and Visit relationships', function () {
     expect($patient->visits)->toHaveCount(2)
         ->and($patient->visits->modelKeys())->toBe($visits->modelKeys())
         ->and($visits->every(fn (Visit $visit): bool => $visit->patient->is($patient)))->toBeTrue();
+});
+
+it('links at most one Visit to an Appointment while preserving both records', function () {
+    $patient = Patient::factory()->create();
+    $appointment = Appointment::factory()->for($patient)->create();
+    $visit = Visit::factory()->for($patient)->create([
+        'appointment_id' => $appointment->id,
+    ]);
+
+    expect($visit->appointment?->is($appointment))->toBeTrue()
+        ->and($appointment->visit?->is($visit))->toBeTrue()
+        ->and($visit->patient->is($appointment->patient))->toBeTrue();
+
+    expect(fn () => Visit::factory()->for($patient)->create([
+        'appointment_id' => $appointment->id,
+    ]))->toThrow(QueryException::class);
+
+    $visit->appointment()->dissociate();
+
+    expect(fn () => $visit->save())->toThrow(LogicException::class)
+        ->and($appointment->fresh())->not->toBeNull()
+        ->and($visit->fresh()->appointment_id)->toBe($appointment->id);
 });
 
 it('generates Patient and Visit identifiers inside the model boundary', function () {

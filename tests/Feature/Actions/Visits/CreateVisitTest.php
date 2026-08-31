@@ -3,6 +3,7 @@
 use App\Actions\Audit\RecordAuditLog;
 use App\Actions\Visits\CreateVisit;
 use App\AuditAction;
+use App\Models\Appointment;
 use App\Models\AuditLog;
 use App\Models\Patient;
 use App\Models\User;
@@ -114,6 +115,25 @@ it('enforces Visit authorization at the action boundary', function () {
     expect(Visit::query()->count())->toBe(0)
         ->and(AuditLog::query()->count())->toBe(0);
 });
+
+it('enforces both Appointment viewing and Visit creation at the handoff action boundary', function (StaffRole $staffRole) {
+    $actor = User::factory()->forRole($staffRole)->create();
+    $appointment = Appointment::factory()->create();
+
+    expect(fn () => app(CreateVisit::class)->fromAppointment(
+        $actor,
+        $appointment,
+    ))->toThrow(AuthorizationException::class);
+
+    expect(Visit::query()->count())->toBe(0)
+        ->and(AuditLog::query()->count())->toBe(0);
+})->with([
+    StaffRole::Accountant,
+    StaffRole::Doctor,
+    StaffRole::Nurse,
+    StaffRole::Administrator,
+    StaffRole::Management,
+]);
 
 it('rolls back Visit creation when audit recording fails', function () {
     $actor = User::factory()->forRole(StaffRole::Receptionist)->create();

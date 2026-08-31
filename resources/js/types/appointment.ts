@@ -9,18 +9,29 @@ export type AppointmentPatient = {
     name: string;
 };
 
+export type AppointmentLinkedVisit = {
+    id: number;
+    visitNumber: string;
+    status: {
+        value: 'created';
+        label: string;
+    };
+    nextStep: string;
+};
+
 export type AppointmentSummary = {
     id: number;
     appointmentNumber: string;
     scheduledAt: string;
     status: AppointmentStatus;
     isScheduled: boolean;
+    linkedVisit: AppointmentLinkedVisit | null;
     patient: AppointmentPatient;
 };
 
 export type PatientAppointmentHistoryItem = Omit<
     AppointmentSummary,
-    'isScheduled' | 'patient'
+    'isScheduled' | 'linkedVisit' | 'patient'
 >;
 
 export type AppointmentPage = {

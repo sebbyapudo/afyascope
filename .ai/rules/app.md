@@ -4,6 +4,7 @@ paths:
   - 'app/**/Patient*.php'
   - 'app/**/Visit*.php'
   - 'app/**/*Appointment*.php'
+  - 'app/**/*{Appointment,Visit}*.php'
 ---
 
 # App
@@ -19,3 +20,6 @@ Visit registry, detail, and creation are Receptionist-only through visits.view a
 
 ## Appointment workflow is scheduling-only
 Appointments remain separate from Visits. Their only statuses are scheduled, cancelled, and no_show; cancelled/no_show are terminal. Create and reschedule require a future scheduled_at. Do not add attended/completed, administrative notes, deletion, billing, check-in, clinical, or Visit-creation behavior without explicit approval. Repeated/no-op transitions must not create audit events.
+
+## Keep the Reception Appointment-to-Visit handoff minimal
+A scheduled Appointment may produce at most one Visit through the Reception handoff. The Visit reuses the Appointment Patient, remains `created`, and exposes `Awaiting consultation billing`; the Appointment stays preserved with its existing status. Enforce one Visit per Appointment with nullable unique `visits.appointment_id`, lock the Appointment during handoff, and do not add billing, clearance, check-in, clinical, or automatic Appointment transitions.

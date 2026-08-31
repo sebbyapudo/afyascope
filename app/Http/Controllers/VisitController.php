@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\Visit;
 use Illuminate\Database\Eloquent\Builder;
@@ -18,8 +19,11 @@ class VisitController extends Controller
         ]);
         $search = trim((string) ($validated['q'] ?? ''));
         $visits = Visit::query()
-            ->select(['id', 'patient_id', 'visit_number', 'occurred_at', 'status'])
-            ->with('patient:id,patient_number,first_name,middle_name,last_name')
+            ->select(['id', 'patient_id', 'appointment_id', 'visit_number', 'occurred_at', 'status'])
+            ->with([
+                'patient:id,patient_number,first_name,middle_name,last_name',
+                'appointment:id,appointment_number',
+            ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
 
@@ -59,7 +63,10 @@ class VisitController extends Controller
 
     public function show(Request $request, Visit $visit): Response
     {
-        $visit->load('patient:id,patient_number,first_name,middle_name,last_name');
+        $visit->load([
+            'patient:id,patient_number,first_name,middle_name,last_name',
+            'appointment:id,appointment_number',
+        ]);
         $status = $request->session()->get('status');
 
         return Inertia::render('visits/show', [
@@ -69,7 +76,7 @@ class VisitController extends Controller
     }
 
     /**
-     * @return array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, patient: array{id: int, patientNumber: string, name: string}}
+     * @return array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, appointment: array{id: int, appointmentNumber: string}|null, patient: array{id: int, patientNumber: string, name: string}}
      */
     private function visitData(Visit $visit): array
     {
@@ -85,6 +92,10 @@ class VisitController extends Controller
                 'label' => $visit->status->displayName(),
             ],
             'nextStep' => $visit->status->handoffLabel(),
+            'appointment' => $visit->appointment instanceof Appointment ? [
+                'id' => $visit->appointment->id,
+                'appointmentNumber' => $visit->appointment->appointment_number,
+            ] : null,
             'patient' => [
                 'id' => $patient->id,
                 'patientNumber' => $patient->patient_number,

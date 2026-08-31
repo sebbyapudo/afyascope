@@ -14,6 +14,7 @@ enum AuditAction: string
     case AppointmentRescheduled = 'appointment.rescheduled';
     case AppointmentCancelled = 'appointment.cancelled';
     case AppointmentNoShow = 'appointment.no_show';
+    case AppointmentVisitLinked = 'appointment.visit_linked';
 
     public function displayName(): string
     {
@@ -28,6 +29,7 @@ enum AuditAction: string
             self::AppointmentRescheduled => 'Appointment rescheduled',
             self::AppointmentCancelled => 'Appointment cancelled',
             self::AppointmentNoShow => 'Appointment marked no-show',
+            self::AppointmentVisitLinked => 'Appointment linked to Visit',
         };
     }
 }

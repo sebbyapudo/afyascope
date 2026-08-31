@@ -3,6 +3,7 @@
 use App\Http\Controllers\AppointmentCancelController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentNoShowController;
+use App\Http\Controllers\AppointmentVisitController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PatientAppointmentController;
@@ -40,6 +41,14 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/appointments/{appointment}/no-show', AppointmentNoShowController::class)
         ->can('update', 'appointment')
         ->name('appointments.no-show');
+    Route::get('/appointments/{appointment}/visit/create', [AppointmentVisitController::class, 'create'])
+        ->can('view', 'appointment')
+        ->can('create', Visit::class)
+        ->name('appointments.visit.create');
+    Route::post('/appointments/{appointment}/visit', [AppointmentVisitController::class, 'store'])
+        ->can('view', 'appointment')
+        ->can('create', Visit::class)
+        ->name('appointments.visit.store');
     Route::get('/appointments/{appointment}', [AppointmentController::class, 'show'])
         ->can('view', 'appointment')
         ->name('appointments.show');

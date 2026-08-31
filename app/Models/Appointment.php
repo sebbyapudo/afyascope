@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -21,6 +22,7 @@ use LogicException;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Patient $patient
+ * @property-read Visit|null $visit
  */
 #[Fillable(['patient_id', 'scheduled_at'])]
 class Appointment extends Model
@@ -39,6 +41,14 @@ class Appointment extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    /**
+     * @return HasOne<Visit, $this>
+     */
+    public function visit(): HasOne
+    {
+        return $this->hasOne(Visit::class);
     }
 
     protected static function booted(): void

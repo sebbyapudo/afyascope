@@ -15,11 +15,13 @@ use LogicException;
 /**
  * @property int $id
  * @property int $patient_id
+ * @property int|null $appointment_id
  * @property string $visit_number
  * @property CarbonImmutable $occurred_at
  * @property VisitStatus $status
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
+ * @property-read Appointment|null $appointment
  * @property-read Patient $patient
  */
 #[Fillable(['patient_id', 'occurred_at'])]
@@ -41,6 +43,14 @@ class Visit extends Model
         return $this->belongsTo(Patient::class);
     }
 
+    /**
+     * @return BelongsTo<Appointment, $this>
+     */
+    public function appointment(): BelongsTo
+    {
+        return $this->belongsTo(Appointment::class);
+    }
+
     protected static function booted(): void
     {
         static::creating(function (Visit $visit): void {
@@ -56,6 +66,10 @@ class Visit extends Model
         static::updating(function (Visit $visit): void {
             if ($visit->isDirty('visit_number')) {
                 throw new LogicException('Visit numbers cannot be changed.');
+            }
+
+            if ($visit->isDirty('appointment_id')) {
+                throw new LogicException('A Visit appointment linkage cannot be changed.');
             }
         });
     }

@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
+import { show as showAppointment } from '@/routes/appointments';
 import { show as showPatient } from '@/routes/patients';
 import type { VisitSummary } from '@/types';
 
@@ -26,9 +27,15 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
                     backLink={
                         <Link
                             className={textLinkStyles}
-                            href={showPatient(visit.patient.id)}
+                            href={
+                                visit.appointment
+                                    ? showAppointment(visit.appointment.id)
+                                    : showPatient(visit.patient.id)
+                            }
                         >
-                            Back to Patient profile
+                            {visit.appointment
+                                ? 'Back to originating Appointment'
+                                : 'Back to Patient profile'}
                         </Link>
                     }
                     description="Administrative Visit record"
@@ -79,6 +86,23 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
                                 </StatusBadge>
                             </dd>
                         </div>
+                        {visit.appointment ? (
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Originating Appointment
+                                </dt>
+                                <dd className="mt-2">
+                                    <Link
+                                        className={textLinkStyles}
+                                        href={showAppointment(
+                                            visit.appointment.id,
+                                        )}
+                                    >
+                                        {visit.appointment.appointmentNumber}
+                                    </Link>
+                                </dd>
+                            </div>
+                        ) : null}
                     </dl>
                 </Panel>
                 <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6">

@@ -6,7 +6,9 @@ import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { cancel, edit, noShow } from '@/routes/appointments';
+import { create as createVisit } from '@/routes/appointments/visit';
 import { show as showPatient } from '@/routes/patients';
+import { show as showVisit } from '@/routes/visits';
 import type { AppointmentStatus, AppointmentSummary } from '@/types';
 
 type ShowAppointmentProps = {
@@ -40,6 +42,10 @@ export default function ShowAppointment({
     const { props } = usePage();
     const canChange =
         props.auth.capabilities.updateAppointments && appointment.isScheduled;
+    const canStartVisit =
+        props.auth.capabilities.createVisits &&
+        appointment.isScheduled &&
+        appointment.linkedVisit === null;
 
     return (
         <>
@@ -47,10 +53,28 @@ export default function ShowAppointment({
             <PageContainer>
                 <PageHeader
                     actions={
-                        canChange ? (
-                            <ActionLink href={edit(appointment.id)}>
-                                Reschedule
-                            </ActionLink>
+                        canStartVisit || canChange ? (
+                            <div className="flex flex-wrap gap-3">
+                                {canStartVisit ? (
+                                    <ActionLink
+                                        href={createVisit(appointment.id)}
+                                    >
+                                        Start Visit
+                                    </ActionLink>
+                                ) : null}
+                                {canChange ? (
+                                    <ActionLink
+                                        href={edit(appointment.id)}
+                                        variant={
+                                            canStartVisit
+                                                ? 'secondary'
+                                                : 'primary'
+                                        }
+                                    >
+                                        Reschedule
+                                    </ActionLink>
+                                ) : null}
+                            </div>
                         ) : null
                     }
                     backLink={
@@ -113,8 +137,46 @@ export default function ShowAppointment({
                                 </StatusBadge>
                             </dd>
                         </div>
+                        {appointment.linkedVisit ? (
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Attendance Visit
+                                </dt>
+                                <dd className="mt-2">
+                                    <Link
+                                        className={textLinkStyles}
+                                        href={showVisit(
+                                            appointment.linkedVisit.id,
+                                        )}
+                                    >
+                                        {appointment.linkedVisit.visitNumber}
+                                    </Link>
+                                    <span className="mt-1 block text-sm text-text-secondary">
+                                        {appointment.linkedVisit.nextStep}
+                                    </span>
+                                </dd>
+                            </div>
+                        ) : null}
                     </dl>
                 </Panel>
+
+                {canStartVisit ? (
+                    <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6">
+                        <h2 className="font-semibold text-info">
+                            Patient attendance
+                        </h2>
+                        <p className="mt-1 text-sm leading-6 text-info">
+                            Start a Visit for this existing Patient. The
+                            Appointment will remain available as scheduling
+                            history.
+                        </p>
+                        <div className="mt-4">
+                            <ActionLink href={createVisit(appointment.id)}>
+                                Start Visit from Appointment
+                            </ActionLink>
+                        </div>
+                    </Panel>
+                ) : null}
 
                 {canChange ? (
                     <Panel className="p-5 sm:p-6">

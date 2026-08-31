@@ -8,6 +8,7 @@ use App\Http\Requests\RescheduleAppointmentRequest;
 use App\Models\Appointment;
 use App\Models\Patient;
 use App\Models\User;
+use App\Models\Visit;
 use Carbon\CarbonImmutable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
@@ -24,13 +25,18 @@ class AppointmentController extends Controller
             'q' => ['nullable', 'string', 'max:100'],
             'date' => ['nullable', 'date_format:Y-m-d'],
             'status' => ['nullable', Rule::enum(AppointmentStatus::class)],
+            'awaiting_attendance' => ['nullable', 'boolean'],
         ]);
         $search = trim((string) ($validated['q'] ?? ''));
         $date = (string) ($validated['date'] ?? '');
         $status = (string) ($validated['status'] ?? '');
+        $awaitingAttendance = (bool) ($validated['awaiting_attendance'] ?? false);
         $appointments = Appointment::query()
             ->select(['id', 'patient_id', 'appointment_number', 'scheduled_at', 'status'])
-            ->with('patient:id,patient_number,first_name,middle_name,last_name')
+            ->with([
+                'patient:id,patient_number,first_name,middle_name,last_name',
+                'visit:id,appointment_id,visit_number,status',
+            ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
 
@@ -55,6 +61,9 @@ class AppointmentController extends Controller
                 ]);
             })
             ->when($status !== '', fn (Builder $query) => $query->where('status', $status))
+            ->when($awaitingAttendance, fn (Builder $query) => $query
+                ->where('status', AppointmentStatus::Scheduled->value)
+                ->whereDoesntHave('visit'))
             ->orderByDesc('scheduled_at')
             ->orderByDesc('id')
             ->paginate(15)
@@ -77,6 +86,7 @@ class AppointmentController extends Controller
                 'q' => $search,
                 'date' => $date,
                 'status' => $status,
+                'awaitingAttendance' => $awaitingAttendance,
             ],
             'statusOptions' => $this->statusOptions(),
         ]);
@@ -84,7 +94,10 @@ class AppointmentController extends Controller
 
     public function show(Request $request, Appointment $appointment): Response
     {
-        $appointment->load('patient:id,patient_number,first_name,middle_name,last_name');
+        $appointment->load([
+            'patient:id,patient_number,first_name,middle_name,last_name',
+            'visit:id,appointment_id,visit_number,status',
+        ]);
         $status = $request->session()->get('status');
 
         return Inertia::render('appointments/show', [
@@ -95,7 +108,10 @@ class AppointmentController extends Controller
 
     public function edit(Appointment $appointment): Response
     {
-        $appointment->load('patient:id,patient_number,first_name,middle_name,last_name');
+        $appointment->load([
+            'patient:id,patient_number,first_name,middle_name,last_name',
+            'visit:id,appointment_id,visit_number,status',
+        ]);
 
         return Inertia::render('appointments/edit', [
             'appointment' => $this->appointmentData($appointment),
@@ -126,12 +142,13 @@ class AppointmentController extends Controller
     }
 
     /**
-     * @return array{id: int, appointmentNumber: string, scheduledAt: string, status: array{value: string, label: string}, isScheduled: bool, patient: array{id: int, patientNumber: string, name: string}}
+     * @return array{id: int, appointmentNumber: string, scheduledAt: string, status: array{value: string, label: string}, isScheduled: bool, linkedVisit: array{id: int, visitNumber: string, status: array{value: string, label: string}, nextStep: string}|null, patient: array{id: int, patientNumber: string, name: string}}
      */
     private function appointmentData(Appointment $appointment): array
     {
         /** @var Patient $patient */
         $patient = $appointment->patient;
+        $linkedVisit = $appointment->visit;
 
         return [
             'id' => $appointment->id,
@@ -142,6 +159,15 @@ class AppointmentController extends Controller
                 'label' => $appointment->status->displayName(),
             ],
             'isScheduled' => $appointment->status === AppointmentStatus::Scheduled,
+            'linkedVisit' => $linkedVisit instanceof Visit ? [
+                'id' => $linkedVisit->id,
+                'visitNumber' => $linkedVisit->visit_number,
+                'status' => [
+                    'value' => $linkedVisit->status->value,
+                    'label' => $linkedVisit->status->displayName(),
+                ],
+                'nextStep' => $linkedVisit->status->handoffLabel(),
+            ] : null,
             'patient' => [
                 'id' => $patient->id,
                 'patientNumber' => $patient->patient_number,
