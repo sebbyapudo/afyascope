@@ -36,6 +36,7 @@ class AppointmentController extends Controller
             ->with([
                 'patient:id,patient_number,first_name,middle_name,last_name',
                 'visit:id,appointment_id,visit_number,status',
+                'visit.consultationBill:id,visit_id,type',
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
@@ -97,6 +98,7 @@ class AppointmentController extends Controller
         $appointment->load([
             'patient:id,patient_number,first_name,middle_name,last_name',
             'visit:id,appointment_id,visit_number,status',
+            'visit.consultationBill:id,visit_id,type',
         ]);
         $status = $request->session()->get('status');
 
@@ -111,6 +113,7 @@ class AppointmentController extends Controller
         $appointment->load([
             'patient:id,patient_number,first_name,middle_name,last_name',
             'visit:id,appointment_id,visit_number,status',
+            'visit.consultationBill:id,visit_id,type',
         ]);
 
         return Inertia::render('appointments/edit', [
@@ -166,7 +169,7 @@ class AppointmentController extends Controller
                     'value' => $linkedVisit->status->value,
                     'label' => $linkedVisit->status->displayName(),
                 ],
-                'nextStep' => $linkedVisit->status->handoffLabel(),
+                'nextStep' => $linkedVisit->workflowMessage(),
             ] : null,
             'patient' => [
                 'id' => $patient->id,

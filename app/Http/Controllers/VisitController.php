@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Appointment;
+use App\Models\Bill;
 use App\Models\Patient;
 use App\Models\Visit;
 use Illuminate\Database\Eloquent\Builder;
@@ -23,6 +24,7 @@ class VisitController extends Controller
             ->with([
                 'patient:id,patient_number,first_name,middle_name,last_name',
                 'appointment:id,appointment_number',
+                'consultationBill.items:id,bill_id,amount_minor',
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
@@ -66,6 +68,7 @@ class VisitController extends Controller
         $visit->load([
             'patient:id,patient_number,first_name,middle_name,last_name',
             'appointment:id,appointment_number',
+            'consultationBill.items:id,bill_id,amount_minor',
         ]);
         $status = $request->session()->get('status');
 
@@ -76,12 +79,13 @@ class VisitController extends Controller
     }
 
     /**
-     * @return array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, appointment: array{id: int, appointmentNumber: string}|null, patient: array{id: int, patientNumber: string, name: string}}
+     * @return array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, consultationBill: array{billNumber: string, status: array{value: string, label: string}, totalAmountMinor: int}|null, appointment: array{id: int, appointmentNumber: string}|null, patient: array{id: int, patientNumber: string, name: string}}
      */
     private function visitData(Visit $visit): array
     {
         /** @var Patient $patient */
         $patient = $visit->patient;
+        $consultationBill = $visit->consultationBill;
 
         return [
             'id' => $visit->id,
@@ -91,7 +95,15 @@ class VisitController extends Controller
                 'value' => $visit->status->value,
                 'label' => $visit->status->displayName(),
             ],
-            'nextStep' => $visit->status->handoffLabel(),
+            'nextStep' => $visit->workflowMessage(),
+            'consultationBill' => $consultationBill instanceof Bill ? [
+                'billNumber' => $consultationBill->bill_number,
+                'status' => [
+                    'value' => $consultationBill->status->value,
+                    'label' => $consultationBill->status->displayName(),
+                ],
+                'totalAmountMinor' => $consultationBill->totalAmountMinor(),
+            ] : null,
             'appointment' => $visit->appointment instanceof Appointment ? [
                 'id' => $visit->appointment->id,
                 'appointmentNumber' => $visit->appointment->appointment_number,

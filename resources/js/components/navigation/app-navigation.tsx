@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { index as appointmentIndex } from '@/routes/appointments';
 import { index as auditLogIndex } from '@/routes/audit-logs';
+import { index as consultationBillingIndex } from '@/routes/billing/consultations';
 import { index as patientIndex } from '@/routes/patients';
 import { index as staffIndex } from '@/routes/staff';
 import { index as visitIndex } from '@/routes/visits';
@@ -62,6 +63,16 @@ export function navigationItems(
             href: visitIndex(),
             label: 'Visits',
             visible: capabilities.viewVisits,
+        },
+        {
+            active: isCurrentPath(
+                currentUrl,
+                consultationBillingIndex.url().replace(/\/consultations$/, ''),
+                true,
+            ),
+            href: consultationBillingIndex(),
+            label: 'Consultation Billing',
+            visible: capabilities.viewBilling,
         },
         {
             active: isCurrentPath(currentUrl, staffIndex.url(), true),

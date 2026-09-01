@@ -39,8 +39,8 @@ export default function VisitIndex({ filters, visits }: VisitIndexProps) {
                             </ActionLink>
                         ) : null
                     }
-                    description="Created Visits are ready for the Accountant to begin consultation billing."
-                    title="Visits awaiting consultation billing"
+                    description="Administrative Visit records and their current operational handoff."
+                    title="Visits"
                 />
 
                 <Panel className="p-4 sm:p-5">
@@ -98,7 +98,7 @@ export default function VisitIndex({ filters, visits }: VisitIndexProps) {
                             description={
                                 filters.q
                                     ? `No Visit records match “${filters.q}”.`
-                                    : 'Newly created Visits awaiting consultation billing will appear here.'
+                                    : 'Created Visit records will appear here.'
                             }
                             title={
                                 filters.q

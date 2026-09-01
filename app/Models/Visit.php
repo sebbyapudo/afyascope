@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\BillType;
 use App\VisitStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\VisitFactory;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -25,6 +27,7 @@ use LogicException;
  * @property CarbonImmutable|null $updated_at
  * @property-read Appointment|null $appointment
  * @property-read Collection<int, Bill> $bills
+ * @property-read Bill|null $consultationBill
  * @property-read Patient $patient
  */
 #[Fillable(['patient_id', 'occurred_at'])]
@@ -60,6 +63,26 @@ class Visit extends Model
     public function bills(): HasMany
     {
         return $this->hasMany(Bill::class);
+    }
+
+    /**
+     * @return HasOne<Bill, $this>
+     */
+    public function consultationBill(): HasOne
+    {
+        return $this->hasOne(Bill::class)
+            ->where('type', BillType::Consultation->value);
+    }
+
+    public function workflowMessage(): string
+    {
+        $hasConsultationBill = $this->relationLoaded('consultationBill')
+            ? $this->consultationBill instanceof Bill
+            : $this->consultationBill()->exists();
+
+        return $hasConsultationBill
+            ? 'Awaiting consultation payment'
+            : $this->status->handoffLabel();
     }
 
     protected static function booted(): void

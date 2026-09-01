@@ -23,6 +23,8 @@ export type Capabilities = {
     viewAppointments: boolean;
     createAppointments: boolean;
     updateAppointments: boolean;
+    viewBilling: boolean;
+    createBilling: boolean;
 };
 
 export type Auth = {

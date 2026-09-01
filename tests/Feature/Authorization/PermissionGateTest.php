@@ -66,10 +66,11 @@ test('gate authorization follows database permissions instead of role names', fu
     expect(Gate::forUser($administrator)->denies(StaffPermission::DashboardView))->toBeTrue();
 });
 
-test('only Accountant receives the billing view gate', function (StaffRole $role, bool $allowed) {
+test('only Accountant receives the billing gates', function (StaffRole $role, bool $allowed) {
     $user = User::factory()->forRole($role)->create();
 
-    expect(Gate::forUser($user)->allows(StaffPermission::BillingView))->toBe($allowed);
+    expect(Gate::forUser($user)->allows(StaffPermission::BillingView))->toBe($allowed)
+        ->and(Gate::forUser($user)->allows(StaffPermission::BillingCreate))->toBe($allowed);
 })->with([
     'Receptionist' => [StaffRole::Receptionist, false],
     'Accountant' => [StaffRole::Accountant, true],

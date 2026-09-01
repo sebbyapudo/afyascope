@@ -29,7 +29,7 @@ class BillPolicy
      */
     public function create(User $user): bool
     {
-        return false;
+        return $user->hasPermission(StaffPermission::BillingCreate);
     }
 
     /**

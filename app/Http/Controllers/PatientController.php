@@ -222,6 +222,7 @@ class PatientController extends Controller
         $visits = Visit::query()
             ->whereBelongsTo($patient)
             ->select(['id', 'patient_id', 'visit_number', 'occurred_at', 'status'])
+            ->with('consultationBill:id,visit_id,type')
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
             ->paginate(10, ['*'], 'visits_page')
@@ -239,7 +240,7 @@ class PatientController extends Controller
                             'value' => $visit->status->value,
                             'label' => $visit->status->displayName(),
                         ],
-                        'nextStep' => $visit->status->handoffLabel(),
+                        'nextStep' => $visit->workflowMessage(),
                     ])
                     ->all(),
             ),

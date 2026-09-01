@@ -33,6 +33,8 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'viewAppointments' => false,
                 'createAppointments' => false,
                 'updateAppointments' => false,
+                'viewBilling' => false,
+                'createBilling' => false,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -60,6 +62,8 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'viewAppointments' => false,
                 'createAppointments' => false,
                 'updateAppointments' => false,
+                'viewBilling' => false,
+                'createBilling' => false,
             ])
         );
 });
@@ -78,6 +82,24 @@ test('Receptionist Inertia responses expose only the Patient capabilities grante
             ->where('auth.capabilities.viewAppointments', true)
             ->where('auth.capabilities.createAppointments', true)
             ->where('auth.capabilities.updateAppointments', true)
+            ->where('auth.capabilities.viewUsers', false)
+            ->where('auth.capabilities.viewAudit', false)
+            ->where('auth.capabilities.viewBilling', false)
+            ->where('auth.capabilities.createBilling', false)
+        );
+});
+
+test('Accountant Inertia responses expose only the billing capabilities granted to the role', function () {
+    $accountant = User::factory()->forRole(StaffRole::Accountant)->create();
+
+    $this->actingAs($accountant)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.capabilities.viewBilling', true)
+            ->where('auth.capabilities.createBilling', true)
+            ->where('auth.capabilities.viewPatients', false)
+            ->where('auth.capabilities.viewVisits', false)
+            ->where('auth.capabilities.viewAppointments', false)
             ->where('auth.capabilities.viewUsers', false)
             ->where('auth.capabilities.viewAudit', false)
         );

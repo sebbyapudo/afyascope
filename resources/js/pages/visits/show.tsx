@@ -5,6 +5,7 @@ import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
+import { formatMinorAmount } from '@/lib/money';
 import { show as showAppointment } from '@/routes/appointments';
 import { show as showPatient } from '@/routes/patients';
 import type { VisitSummary } from '@/types';
@@ -105,6 +106,43 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
                         ) : null}
                     </dl>
                 </Panel>
+                {visit.consultationBill ? (
+                    <Panel className="p-5 sm:p-6">
+                        <h2 className="text-lg font-semibold text-text">
+                            Consultation Bill
+                        </h2>
+                        <dl className="mt-4 grid gap-x-8 gap-y-5 sm:grid-cols-3">
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Bill reference
+                                </dt>
+                                <dd className="mt-2 text-sm font-semibold text-brand-primary tabular-nums">
+                                    {visit.consultationBill.billNumber}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Amount
+                                </dt>
+                                <dd className="mt-2 text-sm text-text tabular-nums">
+                                    {formatMinorAmount(
+                                        visit.consultationBill.totalAmountMinor,
+                                    )}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Bill status
+                                </dt>
+                                <dd className="mt-2">
+                                    <StatusBadge tone="warning">
+                                        {visit.consultationBill.status.label}
+                                    </StatusBadge>
+                                </dd>
+                            </div>
+                        </dl>
+                    </Panel>
+                ) : null}
                 <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6">
                     <h2 className="font-semibold text-info">Next handoff</h2>
                     <p className="mt-1 text-sm text-info">{visit.nextStep}</p>

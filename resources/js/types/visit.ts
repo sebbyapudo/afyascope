@@ -14,19 +14,26 @@ export type VisitAppointment = {
     appointmentNumber: string;
 };
 
+export type VisitConsultationBill = {
+    billNumber: string;
+    status: VisitStatus;
+    totalAmountMinor: number;
+};
+
 export type VisitSummary = {
     id: number;
     visitNumber: string;
     occurredAt: string;
     status: VisitStatus;
     nextStep: string;
+    consultationBill: VisitConsultationBill | null;
     appointment: VisitAppointment | null;
     patient: VisitPatient;
 };
 
 export type PatientVisitHistoryItem = Omit<
     VisitSummary,
-    'appointment' | 'patient'
+    'appointment' | 'consultationBill' | 'patient'
 >;
 
 export type VisitPage = {

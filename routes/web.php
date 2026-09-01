@@ -5,6 +5,8 @@ use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\AppointmentNoShowController;
 use App\Http\Controllers\AppointmentVisitController;
 use App\Http\Controllers\AuditLogController;
+use App\Http\Controllers\BillController;
+use App\Http\Controllers\ConsultationBillingController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PatientAppointmentController;
 use App\Http\Controllers\PatientController;
@@ -14,6 +16,7 @@ use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitController;
 use App\Models\Appointment;
 use App\Models\AuditLog;
+use App\Models\Bill;
 use App\Models\Patient;
 use App\Models\User;
 use App\Models\Visit;
@@ -26,6 +29,19 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/billing/consultations', [ConsultationBillingController::class, 'index'])
+        ->can('viewAny', Bill::class)
+        ->name('billing.consultations.index');
+    Route::get('/billing/consultations/{visit}/create', [ConsultationBillingController::class, 'create'])
+        ->can('create', Bill::class)
+        ->name('billing.consultations.create');
+    Route::post('/billing/consultations/{visit}', [ConsultationBillingController::class, 'store'])
+        ->can('create', Bill::class)
+        ->name('billing.consultations.store');
+    Route::get('/billing/bills/{bill}', BillController::class)
+        ->can('view', 'bill')
+        ->name('billing.bills.show');
+
     Route::get('/appointments', [AppointmentController::class, 'index'])
         ->can('viewAny', Appointment::class)
         ->name('appointments.index');

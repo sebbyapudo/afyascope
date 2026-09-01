@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Appointment;
+use App\Models\Bill;
 use App\Models\Patient;
 use App\Models\Role;
 use App\Models\User;
@@ -74,6 +75,8 @@ class HandleInertiaRequests extends Middleware
                     'viewAppointments' => $user?->can('viewAny', Appointment::class) ?? false,
                     'createAppointments' => $user?->can('create', Appointment::class) ?? false,
                     'updateAppointments' => $user?->can(StaffPermission::AppointmentsUpdate) ?? false,
+                    'viewBilling' => $user?->can('viewAny', Bill::class) ?? false,
+                    'createBilling' => $user?->can('create', Bill::class) ?? false,
                 ],
             ],
         ];

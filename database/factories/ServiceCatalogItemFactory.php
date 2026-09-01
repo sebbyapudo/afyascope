@@ -21,6 +21,7 @@ class ServiceCatalogItemFactory extends Factory
         return [
             'name' => 'Consultation',
             'category' => BillType::Consultation,
+            'is_active' => true,
             'unit_price_minor' => fake()->numberBetween(10_000, 500_000),
         ];
     }
@@ -30,6 +31,13 @@ class ServiceCatalogItemFactory extends Factory
         return $this->state(fn (): array => [
             'name' => 'Procedure',
             'category' => BillType::Procedure,
+        ]);
+    }
+
+    public function inactive(): static
+    {
+        return $this->state(fn (): array => [
+            'is_active' => false,
         ]);
     }
 }
