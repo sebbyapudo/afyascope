@@ -23,3 +23,6 @@ Appointments remain separate from Visits. Their only statuses are scheduled, can
 
 ## Keep the Reception Appointment-to-Visit handoff minimal
 A scheduled Appointment may produce at most one Visit through the Reception handoff. The Visit reuses the Appointment Patient, remains `created`, and exposes `Awaiting consultation billing`; the Appointment stays preserved with its existing status. Enforce one Visit per Appointment with nullable unique `visits.appointment_id`, lock the Appointment during handoff, and do not add billing, clearance, check-in, clinical, or automatic Appointment transitions.
+
+## Reception check-in owns the Doctor-ready transition
+A Visit moves from `created` to `checked_in` only through `CheckInVisit`, after an exact paid consultation Bill, Receipt, and consultation financial clearance are transactionally revalidated. One immutable `VisitCheckIn` per Visit records Receptionist/time/reference and one `visit.checked_in` audit; check-in creates no consultation record.

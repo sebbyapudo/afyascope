@@ -205,7 +205,7 @@ it('exposes linked administrative context without billing check-in or clinical d
             ->missing('visit.billing')
             ->missing('visit.payments')
             ->missing('visit.clearance')
-            ->missing('visit.checkIn')
+            ->where('visit.checkIn', null)
             ->missing('visit.clinical')
             ->missing('visit.procedures')
             ->missing('visit.nursing')

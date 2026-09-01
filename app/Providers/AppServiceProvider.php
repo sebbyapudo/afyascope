@@ -12,6 +12,7 @@ use App\Models\Receipt;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Visit;
+use App\Models\VisitCheckIn;
 use App\Policies\AppointmentPolicy;
 use App\Policies\AuditLogPolicy;
 use App\Policies\BillPolicy;
@@ -21,6 +22,7 @@ use App\Policies\PaymentPolicy;
 use App\Policies\ReceiptPolicy;
 use App\Policies\RolePolicy;
 use App\Policies\UserPolicy;
+use App\Policies\VisitCheckInPolicy;
 use App\Policies\VisitPolicy;
 use App\StaffPermission;
 use Carbon\CarbonImmutable;
@@ -83,6 +85,7 @@ class AppServiceProvider extends ServiceProvider
         Gate::policy(User::class, UserPolicy::class);
         Gate::policy(Role::class, RolePolicy::class);
         Gate::policy(Visit::class, VisitPolicy::class);
+        Gate::policy(VisitCheckIn::class, VisitCheckInPolicy::class);
 
         foreach (StaffPermission::cases() as $permission) {
             Gate::define(

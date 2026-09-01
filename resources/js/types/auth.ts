@@ -29,6 +29,8 @@ export type Capabilities = {
     createPayments: boolean;
     viewClearance: boolean;
     createClearance: boolean;
+    viewCheckIns: boolean;
+    createCheckIns: boolean;
 };
 
 export type Auth = {

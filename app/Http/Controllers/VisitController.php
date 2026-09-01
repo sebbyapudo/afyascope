@@ -7,6 +7,8 @@ use App\Models\Bill;
 use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Visit;
+use App\Models\VisitCheckIn;
+use App\VisitStatus;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -28,6 +30,7 @@ class VisitController extends Controller
                 'consultationBill.items:id,bill_id,amount_minor',
                 'consultationBill.payment:id,bill_id',
                 'consultationBill.financialClearance:id,bill_id,clearance_number,granted_at',
+                'checkIn:id,visit_id,check_in_number,checked_in_at',
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
@@ -74,6 +77,7 @@ class VisitController extends Controller
             'consultationBill.items:id,bill_id,amount_minor',
             'consultationBill.payment:id,bill_id',
             'consultationBill.financialClearance:id,bill_id,clearance_number,granted_at',
+            'checkIn:id,visit_id,check_in_number,checked_in_at',
         ]);
         $status = $request->session()->get('status');
 
@@ -84,7 +88,7 @@ class VisitController extends Controller
     }
 
     /**
-     * @return array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, consultationBill: array{billNumber: string, status: array{value: string, label: string}, totalAmountMinor: int, isFinanciallyCleared: bool}|null, appointment: array{id: int, appointmentNumber: string}|null, patient: array{id: int, patientNumber: string, name: string}}
+     * @return array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, canCheckIn: bool, checkIn: array{id: int, checkInNumber: string, checkedInAt: string}|null, consultationBill: array{billNumber: string, status: array{value: string, label: string}, totalAmountMinor: int, isFinanciallyCleared: bool}|null, appointment: array{id: int, appointmentNumber: string}|null, patient: array{id: int, patientNumber: string, name: string}}
      */
     private function visitData(Visit $visit): array
     {
@@ -101,6 +105,14 @@ class VisitController extends Controller
                 'label' => $visit->status->displayName(),
             ],
             'nextStep' => $visit->workflowMessage(),
+            'canCheckIn' => $visit->status === VisitStatus::Created
+                && $consultationBill?->financialClearance instanceof FinancialClearance
+                && ! $visit->checkIn instanceof VisitCheckIn,
+            'checkIn' => $visit->checkIn instanceof VisitCheckIn ? [
+                'id' => $visit->checkIn->id,
+                'checkInNumber' => $visit->checkIn->check_in_number,
+                'checkedInAt' => $visit->checkIn->checked_in_at->toIso8601String(),
+            ] : null,
             'consultationBill' => $consultationBill instanceof Bill ? [
                 'billNumber' => $consultationBill->bill_number,
                 'status' => [

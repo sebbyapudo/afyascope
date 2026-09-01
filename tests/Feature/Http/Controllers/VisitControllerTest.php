@@ -88,7 +88,13 @@ it('searches by Visit reference Patient reference and partial Patient names', fu
         'last_name' => 'Kamau',
     ]);
     $targetVisit = Visit::factory()->for($targetPatient)->create();
-    Visit::factory()->create();
+    Visit::factory()
+        ->for(Patient::factory()->create([
+            'first_name' => 'Different',
+            'middle_name' => null,
+            'last_name' => 'Person',
+        ]))
+        ->create();
 
     foreach ([$targetVisit->visit_number, $targetPatient->patient_number, 'Ami', 'Wanj', 'Kam'] as $search) {
         $this->actingAs($receptionist)

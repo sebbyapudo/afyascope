@@ -290,7 +290,7 @@ it('projects cleared workflow consistently without changing Visit status or chec
         );
 
     expect($visit->fresh()->status->value)->toBe('created')
-        ->and(Route::has('visits.check-in'))->toBeFalse();
+        ->and(Route::has('check-ins.store'))->toBeTrue();
 });
 
 it('does not automatically clear a Bill when payment succeeds', function () {
@@ -348,13 +348,13 @@ it('logs out and denies an inactive Accountant', function () {
         ->and(AuditLog::query()->count())->toBe(0);
 });
 
-it('exposes clearance routes without check-in mutation or deletion', function () {
+it('exposes immutable clearance routes separately from Reception check-in', function () {
     expect(Route::has('billing.clearances.index'))->toBeTrue()
         ->and(Route::has('billing.clearances.create'))->toBeTrue()
         ->and(Route::has('billing.clearances.store'))->toBeTrue()
         ->and(Route::has('billing.clearances.show'))->toBeTrue()
         ->and(Route::has('billing.clearances.destroy'))->toBeFalse()
-        ->and(Route::has('visits.check-in'))->toBeFalse();
+        ->and(Route::has('check-ins.store'))->toBeTrue();
 });
 
 function clearanceControllerAccountant(): User

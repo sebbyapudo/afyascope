@@ -13,7 +13,7 @@ export type AppointmentLinkedVisit = {
     id: number;
     visitNumber: string;
     status: {
-        value: 'created';
+        value: 'checked_in' | 'created';
         label: string;
     };
     nextStep: string;

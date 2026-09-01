@@ -257,7 +257,7 @@ it('removes billed Visits from the queue and advances derived workflow messaging
             ->where('visit.consultationBill.totalAmountMinor', 125_000)
             ->missing('visit.payments')
             ->missing('visit.clearance')
-            ->missing('visit.checkIn')
+            ->where('visit.checkIn', null)
         );
 
     $this->actingAs($receptionist)

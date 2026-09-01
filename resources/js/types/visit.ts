@@ -1,5 +1,5 @@
 export type VisitStatus = {
-    value: string;
+    value: 'checked_in' | 'created';
     label: string;
 };
 
@@ -27,6 +27,12 @@ export type VisitSummary = {
     occurredAt: string;
     status: VisitStatus;
     nextStep: string;
+    canCheckIn: boolean;
+    checkIn: {
+        id: number;
+        checkInNumber: string;
+        checkedInAt: string;
+    } | null;
     consultationBill: VisitConsultationBill | null;
     appointment: VisitAppointment | null;
     patient: VisitPatient;
@@ -34,7 +40,7 @@ export type VisitSummary = {
 
 export type PatientVisitHistoryItem = Omit<
     VisitSummary,
-    'appointment' | 'consultationBill' | 'patient'
+    'appointment' | 'canCheckIn' | 'checkIn' | 'consultationBill' | 'patient'
 >;
 
 export type VisitPage = {

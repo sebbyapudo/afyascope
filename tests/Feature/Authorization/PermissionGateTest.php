@@ -107,3 +107,17 @@ test('only Accountant receives the financial-clearance gates', function (StaffRo
     'Administrator' => [StaffRole::Administrator, false],
     'Management' => [StaffRole::Management, false],
 ]);
+
+test('only Receptionist receives the check-in gates', function (StaffRole $role, bool $allowed) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->allows(StaffPermission::CheckInView))->toBe($allowed)
+        ->and(Gate::forUser($user)->allows(StaffPermission::CheckInCreate))->toBe($allowed);
+})->with([
+    'Receptionist' => [StaffRole::Receptionist, true],
+    'Accountant' => [StaffRole::Accountant, false],
+    'Doctor' => [StaffRole::Doctor, false],
+    'Nurse' => [StaffRole::Nurse, false],
+    'Administrator' => [StaffRole::Administrator, false],
+    'Management' => [StaffRole::Management, false],
+]);

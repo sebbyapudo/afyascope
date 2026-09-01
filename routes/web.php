@@ -16,6 +16,7 @@ use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\StaffUserController;
+use App\Http\Controllers\VisitCheckInController;
 use App\Http\Controllers\VisitController;
 use App\Models\Appointment;
 use App\Models\AuditLog;
@@ -25,6 +26,7 @@ use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\User;
 use App\Models\Visit;
+use App\Models\VisitCheckIn;
 use Illuminate\Support\Facades\Route;
 
 Route::redirect('/', '/dashboard')->name('home');
@@ -34,6 +36,19 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/check-ins', [VisitCheckInController::class, 'index'])
+        ->can('viewAny', VisitCheckIn::class)
+        ->name('check-ins.index');
+    Route::get('/visits/{visit}/check-in', [VisitCheckInController::class, 'create'])
+        ->can('create', VisitCheckIn::class)
+        ->name('check-ins.create');
+    Route::post('/visits/{visit}/check-in', [VisitCheckInController::class, 'store'])
+        ->can('create', VisitCheckIn::class)
+        ->name('check-ins.store');
+    Route::get('/check-ins/{visitCheckIn}', [VisitCheckInController::class, 'show'])
+        ->can('view', 'visitCheckIn')
+        ->name('check-ins.show');
+
     Route::get('/billing/clearances', [ConsultationFinancialClearanceController::class, 'index'])
         ->can('viewAny', FinancialClearance::class)
         ->name('billing.clearances.index');

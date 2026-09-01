@@ -10,6 +10,7 @@ use App\Models\Payment;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Visit;
+use App\Models\VisitCheckIn;
 use App\StaffPermission;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
@@ -83,6 +84,8 @@ class HandleInertiaRequests extends Middleware
                     'createPayments' => $user?->can('create', Payment::class) ?? false,
                     'viewClearance' => $user?->can('viewAny', FinancialClearance::class) ?? false,
                     'createClearance' => $user?->can('create', FinancialClearance::class) ?? false,
+                    'viewCheckIns' => $user?->can('viewAny', VisitCheckIn::class) ?? false,
+                    'createCheckIns' => $user?->can('create', VisitCheckIn::class) ?? false,
                 ],
             ],
         ];

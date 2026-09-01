@@ -1,5 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
-import { textLinkStyles } from '@/components/ui/button';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { ActionLink, textLinkStyles } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
@@ -7,6 +7,10 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { formatMinorAmount } from '@/lib/money';
 import { show as showAppointment } from '@/routes/appointments';
+import {
+    create as createCheckIn,
+    show as showCheckIn,
+} from '@/routes/check-ins';
 import { show as showPatient } from '@/routes/patients';
 import type { VisitSummary } from '@/types';
 
@@ -20,11 +24,30 @@ function formatDateTime(date: string): string {
 }
 
 export default function ShowVisit({ status, visit }: ShowVisitProps) {
+    const { props } = usePage();
+    const canCheckIn =
+        props.auth.capabilities.createCheckIns && visit.canCheckIn;
+
     return (
         <>
             <Head title={visit.visitNumber} />
             <PageContainer>
                 <PageHeader
+                    actions={
+                        canCheckIn ? (
+                            <ActionLink href={createCheckIn(visit.id)}>
+                                Check in Patient
+                            </ActionLink>
+                        ) : visit.checkIn &&
+                          props.auth.capabilities.viewCheckIns ? (
+                            <ActionLink
+                                href={showCheckIn(visit.checkIn.id)}
+                                variant="secondary"
+                            >
+                                View Check-in
+                            </ActionLink>
+                        ) : null
+                    }
                     backLink={
                         <Link
                             className={textLinkStyles}
@@ -82,7 +105,13 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
                                 Current status
                             </dt>
                             <dd className="mt-2">
-                                <StatusBadge tone="info">
+                                <StatusBadge
+                                    tone={
+                                        visit.status.value === 'checked_in'
+                                            ? 'success'
+                                            : 'info'
+                                    }
+                                >
                                     {visit.status.label}
                                 </StatusBadge>
                             </dd>
@@ -158,6 +187,36 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
                                             ? 'Financially cleared'
                                             : 'Not financially cleared'}
                                     </StatusBadge>
+                                </dd>
+                            </div>
+                        </dl>
+                    </Panel>
+                ) : null}
+                {visit.checkIn ? (
+                    <Panel className="p-5 sm:p-6">
+                        <h2 className="text-lg font-semibold text-text">
+                            Reception check-in
+                        </h2>
+                        <dl className="mt-4 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Check-in reference
+                                </dt>
+                                <dd className="mt-2">
+                                    <Link
+                                        className={textLinkStyles}
+                                        href={showCheckIn(visit.checkIn.id)}
+                                    >
+                                        {visit.checkIn.checkInNumber}
+                                    </Link>
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Checked in
+                                </dt>
+                                <dd className="mt-2 text-sm text-text">
+                                    {formatDateTime(visit.checkIn.checkedInAt)}
                                 </dd>
                             </div>
                         </dl>

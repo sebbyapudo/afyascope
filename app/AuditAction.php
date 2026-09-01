@@ -19,6 +19,7 @@ enum AuditAction: string
     case PaymentRecorded = 'payment.recorded';
     case ReceiptIssued = 'receipt.issued';
     case ConsultationFinancialCleared = 'consultation.financial_cleared';
+    case VisitCheckedIn = 'visit.checked_in';
 
     public function displayName(): string
     {
@@ -38,6 +39,7 @@ enum AuditAction: string
             self::PaymentRecorded => 'Payment recorded',
             self::ReceiptIssued => 'Receipt issued',
             self::ConsultationFinancialCleared => 'Consultation financially cleared',
+            self::VisitCheckedIn => 'Visit checked in',
         };
     }
 }

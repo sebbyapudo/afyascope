@@ -29,6 +29,7 @@ use LogicException;
  * @property-read Collection<int, Bill> $bills
  * @property-read Bill|null $consultationBill
  * @property-read Patient $patient
+ * @property-read VisitCheckIn|null $checkIn
  */
 #[Fillable(['patient_id', 'occurred_at'])]
 class Visit extends Model
@@ -74,8 +75,20 @@ class Visit extends Model
             ->where('type', BillType::Consultation->value);
     }
 
+    /**
+     * @return HasOne<VisitCheckIn, $this>
+     */
+    public function checkIn(): HasOne
+    {
+        return $this->hasOne(VisitCheckIn::class);
+    }
+
     public function workflowMessage(): string
     {
+        if ($this->status === VisitStatus::CheckedIn) {
+            return VisitStatus::CheckedIn->handoffLabel();
+        }
+
         $consultationBill = $this->relationLoaded('consultationBill')
             ? $this->consultationBill
             : $this->consultationBill()->with([
@@ -123,6 +136,16 @@ class Visit extends Model
 
             if ($visit->isDirty('appointment_id')) {
                 throw new LogicException('A Visit appointment linkage cannot be changed.');
+            }
+
+            if ($visit->isDirty('status')) {
+                $isCheckInTransition = $visit->getRawOriginal('status') === VisitStatus::Created->value
+                    && $visit->status === VisitStatus::CheckedIn
+                    && $visit->checkIn()->exists();
+
+                if (! $isCheckInTransition) {
+                    throw new LogicException('Visit status can only change through its owning workflow action.');
+                }
             }
         });
     }
