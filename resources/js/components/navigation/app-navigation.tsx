@@ -4,6 +4,7 @@ import { dashboard } from '@/routes';
 import { index as appointmentIndex } from '@/routes/appointments';
 import { index as auditLogIndex } from '@/routes/audit-logs';
 import { index as consultationBillingIndex } from '@/routes/billing/consultations';
+import { index as paymentIndex } from '@/routes/billing/payments';
 import { index as patientIndex } from '@/routes/patients';
 import { index as staffIndex } from '@/routes/staff';
 import { index as visitIndex } from '@/routes/visits';
@@ -73,6 +74,12 @@ export function navigationItems(
             href: consultationBillingIndex(),
             label: 'Consultation Billing',
             visible: capabilities.viewBilling,
+        },
+        {
+            active: isCurrentPath(currentUrl, paymentIndex.url(), true),
+            href: paymentIndex(),
+            label: 'Payments',
+            visible: capabilities.viewPayments,
         },
         {
             active: isCurrentPath(currentUrl, staffIndex.url(), true),

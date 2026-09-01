@@ -12,12 +12,15 @@ use App\Http\Controllers\PatientAppointmentController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicateController;
 use App\Http\Controllers\PatientVisitController;
+use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitController;
 use App\Models\Appointment;
 use App\Models\AuditLog;
 use App\Models\Bill;
 use App\Models\Patient;
+use App\Models\Payment;
 use App\Models\User;
 use App\Models\Visit;
 use Illuminate\Support\Facades\Route;
@@ -29,6 +32,19 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/billing/payments', [PaymentController::class, 'index'])
+        ->can('viewAny', Payment::class)
+        ->name('billing.payments.index');
+    Route::get('/billing/bills/{bill}/payment', [PaymentController::class, 'create'])
+        ->can('create', Payment::class)
+        ->name('billing.payments.create');
+    Route::post('/billing/bills/{bill}/payment', [PaymentController::class, 'store'])
+        ->can('create', Payment::class)
+        ->name('billing.payments.store');
+    Route::get('/billing/receipts/{receipt}', ReceiptController::class)
+        ->can('view', 'receipt')
+        ->name('billing.receipts.show');
+
     Route::get('/billing/consultations', [ConsultationBillingController::class, 'index'])
         ->can('viewAny', Bill::class)
         ->name('billing.consultations.index');

@@ -97,7 +97,7 @@ export default function AuthenticatedLayout({ children }: PropsWithChildren) {
                 Skip to content
             </a>
 
-            <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block">
+            <aside className="fixed inset-y-0 left-0 z-30 hidden w-64 lg:block print:hidden">
                 <SidebarContent />
             </aside>
 
@@ -121,8 +121,8 @@ export default function AuthenticatedLayout({ children }: PropsWithChildren) {
                 </div>
             </dialog>
 
-            <div className="min-h-screen lg:pl-64">
-                <header className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-border bg-surface px-4 shadow-xs sm:px-6 lg:px-8">
+            <div className="min-h-screen lg:pl-64 print:pl-0">
+                <header className="sticky top-0 z-20 flex min-h-16 items-center gap-3 border-b border-border bg-surface px-4 shadow-xs sm:px-6 lg:px-8 print:hidden">
                     <div className="flex min-w-0 items-center gap-3">
                         <button
                             aria-controls="mobile-navigation"
@@ -172,7 +172,7 @@ export default function AuthenticatedLayout({ children }: PropsWithChildren) {
                 </header>
 
                 <main
-                    className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 sm:py-8 lg:px-8"
+                    className="min-h-[calc(100vh-4rem)] px-4 py-6 sm:px-6 sm:py-8 lg:px-8 print:min-h-0 print:p-0"
                     id="main-content"
                 >
                     {children}

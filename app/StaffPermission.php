@@ -19,6 +19,8 @@ enum StaffPermission: string
     case AppointmentsUpdate = 'appointments.update';
     case BillingView = 'billing.view';
     case BillingCreate = 'billing.create';
+    case PaymentsView = 'payments.view';
+    case PaymentsCreate = 'payments.create';
 
     public function displayName(): string
     {
@@ -38,6 +40,8 @@ enum StaffPermission: string
             self::AppointmentsUpdate => 'Update appointments',
             self::BillingView => 'View billing',
             self::BillingCreate => 'Create bills',
+            self::PaymentsView => 'View payments and receipts',
+            self::PaymentsCreate => 'Record payments and issue receipts',
         };
     }
 }

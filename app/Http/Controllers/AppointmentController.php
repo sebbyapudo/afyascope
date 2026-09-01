@@ -37,6 +37,7 @@ class AppointmentController extends Controller
                 'patient:id,patient_number,first_name,middle_name,last_name',
                 'visit:id,appointment_id,visit_number,status',
                 'visit.consultationBill:id,visit_id,type',
+                'visit.consultationBill.payment:id,bill_id',
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
@@ -99,6 +100,7 @@ class AppointmentController extends Controller
             'patient:id,patient_number,first_name,middle_name,last_name',
             'visit:id,appointment_id,visit_number,status',
             'visit.consultationBill:id,visit_id,type',
+            'visit.consultationBill.payment:id,bill_id',
         ]);
         $status = $request->session()->get('status');
 
@@ -114,6 +116,7 @@ class AppointmentController extends Controller
             'patient:id,patient_number,first_name,middle_name,last_name',
             'visit:id,appointment_id,visit_number,status',
             'visit.consultationBill:id,visit_id,type',
+            'visit.consultationBill.payment:id,bill_id',
         ]);
 
         return Inertia::render('appointments/edit', [

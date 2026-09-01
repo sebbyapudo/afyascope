@@ -313,6 +313,7 @@ it('renders a sanitized consultation Bill detail with no later-stage controls', 
             ->has('bill.items', 1)
             ->where('bill.items.0.description', 'Initial consultation')
             ->where('bill.items.0.amountMinor', 100_050)
+            ->where('bill.payment', null)
             ->missing('bill.visit.patient_id')
             ->missing('bill.patient.id')
             ->missing('bill.payments')
@@ -361,7 +362,7 @@ it('redirects direct confirmation of an already billed Visit to its Bill detail'
         ->assertRedirect(route('billing.bills.show', $bill));
 });
 
-it('does not expose procedure billing or later financial workflow routes', function () {
+it('exposes consultation payment while keeping procedure billing clearance and check-in absent', function () {
     $accountant = consultationBillingAccountant();
     $procedureBill = Bill::factory()->procedure()->create();
 
@@ -369,8 +370,8 @@ it('does not expose procedure billing or later financial workflow routes', funct
         ->get(route('billing.bills.show', $procedureBill))
         ->assertNotFound();
 
-    expect(Route::has('payments.store'))->toBeFalse()
-        ->and(Route::has('receipts.show'))->toBeFalse()
+    expect(Route::has('billing.payments.store'))->toBeTrue()
+        ->and(Route::has('billing.receipts.show'))->toBeTrue()
         ->and(Route::has('billing.clearance.store'))->toBeFalse()
         ->and(Route::has('visits.check-in'))->toBeFalse()
         ->and(Route::has('billing.procedures.store'))->toBeFalse();

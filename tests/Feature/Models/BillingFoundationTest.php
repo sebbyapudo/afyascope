@@ -164,7 +164,7 @@ it('enforces allowed types statuses and positive amounts at the database boundar
         'visit_id' => $visit->id,
         'bill_number' => 'BIL-BAD-STATUS',
         'type' => BillType::Consultation->value,
-        'status' => 'paid',
+        'status' => 'cancelled',
         'created_at' => now(),
         'updated_at' => now(),
     ]))->toThrow(QueryException::class);
@@ -215,15 +215,11 @@ it('rejects orphan financial records and restricts removal of referenced records
         ->and($item->fresh())->not->toBeNull();
 });
 
-it('exposes no later-stage financial tables routes or Visit state', function () {
+it('keeps later-stage clearance and check-in tables routes and Visit state absent', function () {
     $visit = Visit::factory()->create();
 
-    expect(Schema::hasTable('payments'))->toBeFalse()
-        ->and(Schema::hasTable('receipts'))->toBeFalse()
-        ->and(Schema::hasTable('financial_clearances'))->toBeFalse()
+    expect(Schema::hasTable('financial_clearances'))->toBeFalse()
         ->and(Route::has('billing.index'))->toBeFalse()
-        ->and(Route::has('payments.store'))->toBeFalse()
         ->and(Route::has('visits.check-in'))->toBeFalse()
-        ->and(method_exists($visit, 'payments'))->toBeFalse()
         ->and(method_exists($visit, 'financialClearance'))->toBeFalse();
 });

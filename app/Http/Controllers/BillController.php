@@ -6,6 +6,8 @@ use App\BillType;
 use App\Models\Bill;
 use App\Models\BillItem;
 use App\Models\Patient;
+use App\Models\Payment;
+use App\Models\Receipt;
 use App\Models\Visit;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -22,6 +24,8 @@ class BillController extends Controller
 
         $bill->load([
             'items:id,bill_id,description,amount_minor',
+            'payment:id,bill_id,payment_number,amount_minor,method,recorded_at',
+            'payment.receipt:id,payment_id,receipt_number',
             'visit:id,patient_id,visit_number,occurred_at,status',
             'visit.patient:id,patient_number,first_name,middle_name,last_name',
         ]);
@@ -31,6 +35,8 @@ class BillController extends Controller
         $visit = $bill->visit;
         /** @var Patient $patient */
         $patient = $visit->patient;
+        $payment = $bill->payment;
+        $receipt = $payment instanceof Payment ? $payment->receipt : null;
 
         return Inertia::render('billing/show', [
             'bill' => [
@@ -53,6 +59,19 @@ class BillController extends Controller
                         'amountMinor' => $item->amount_minor,
                     ])
                     ->values(),
+                'payment' => $payment instanceof Payment ? [
+                    'paymentNumber' => $payment->payment_number,
+                    'amountMinor' => $payment->amount_minor,
+                    'method' => [
+                        'value' => $payment->method->value,
+                        'label' => $payment->method->displayName(),
+                    ],
+                    'recordedAt' => $payment->recorded_at->toIso8601String(),
+                    'receipt' => $receipt instanceof Receipt ? [
+                        'id' => $receipt->id,
+                        'receiptNumber' => $receipt->receipt_number,
+                    ] : null,
+                ] : null,
                 'visit' => [
                     'visitNumber' => $visit->visit_number,
                     'occurredAt' => $visit->occurred_at->toIso8601String(),

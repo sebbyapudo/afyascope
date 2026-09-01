@@ -76,13 +76,21 @@ class Visit extends Model
 
     public function workflowMessage(): string
     {
-        $hasConsultationBill = $this->relationLoaded('consultationBill')
-            ? $this->consultationBill instanceof Bill
-            : $this->consultationBill()->exists();
+        $consultationBill = $this->relationLoaded('consultationBill')
+            ? $this->consultationBill
+            : $this->consultationBill()->with('payment:id,bill_id')->first();
 
-        return $hasConsultationBill
-            ? 'Awaiting consultation payment'
-            : $this->status->handoffLabel();
+        if ($consultationBill instanceof Bill) {
+            $hasPayment = $consultationBill->relationLoaded('payment')
+                ? $consultationBill->payment instanceof Payment
+                : $consultationBill->payment()->exists();
+
+            return $hasPayment
+                ? 'Awaiting consultation financial clearance'
+                : 'Awaiting consultation payment';
+        }
+
+        return $this->status->handoffLabel();
     }
 
     protected static function booted(): void

@@ -25,6 +25,7 @@ class VisitController extends Controller
                 'patient:id,patient_number,first_name,middle_name,last_name',
                 'appointment:id,appointment_number',
                 'consultationBill.items:id,bill_id,amount_minor',
+                'consultationBill.payment:id,bill_id',
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
@@ -69,6 +70,7 @@ class VisitController extends Controller
             'patient:id,patient_number,first_name,middle_name,last_name',
             'appointment:id,appointment_number',
             'consultationBill.items:id,bill_id,amount_minor',
+            'consultationBill.payment:id,bill_id',
         ]);
         $status = $request->session()->get('status');
 

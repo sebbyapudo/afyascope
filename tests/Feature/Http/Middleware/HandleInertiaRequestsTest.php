@@ -35,6 +35,8 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'updateAppointments' => false,
                 'viewBilling' => false,
                 'createBilling' => false,
+                'viewPayments' => false,
+                'createPayments' => false,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -64,6 +66,8 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'updateAppointments' => false,
                 'viewBilling' => false,
                 'createBilling' => false,
+                'viewPayments' => false,
+                'createPayments' => false,
             ])
         );
 });
@@ -86,6 +90,8 @@ test('Receptionist Inertia responses expose only the Patient capabilities grante
             ->where('auth.capabilities.viewAudit', false)
             ->where('auth.capabilities.viewBilling', false)
             ->where('auth.capabilities.createBilling', false)
+            ->where('auth.capabilities.viewPayments', false)
+            ->where('auth.capabilities.createPayments', false)
         );
 });
 
@@ -97,6 +103,8 @@ test('Accountant Inertia responses expose only the billing capabilities granted 
         ->assertInertia(fn (Assert $page) => $page
             ->where('auth.capabilities.viewBilling', true)
             ->where('auth.capabilities.createBilling', true)
+            ->where('auth.capabilities.viewPayments', true)
+            ->where('auth.capabilities.createPayments', true)
             ->where('auth.capabilities.viewPatients', false)
             ->where('auth.capabilities.viewVisits', false)
             ->where('auth.capabilities.viewAppointments', false)

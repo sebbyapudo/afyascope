@@ -79,3 +79,17 @@ test('only Accountant receives the billing gates', function (StaffRole $role, bo
     'Administrator' => [StaffRole::Administrator, false],
     'Management' => [StaffRole::Management, false],
 ]);
+
+test('only Accountant receives the payment gates', function (StaffRole $role, bool $allowed) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->allows(StaffPermission::PaymentsView))->toBe($allowed)
+        ->and(Gate::forUser($user)->allows(StaffPermission::PaymentsCreate))->toBe($allowed);
+})->with([
+    'Receptionist' => [StaffRole::Receptionist, false],
+    'Accountant' => [StaffRole::Accountant, true],
+    'Doctor' => [StaffRole::Doctor, false],
+    'Nurse' => [StaffRole::Nurse, false],
+    'Administrator' => [StaffRole::Administrator, false],
+    'Management' => [StaffRole::Management, false],
+]);

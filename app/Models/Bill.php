@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -25,6 +26,7 @@ use LogicException;
  * @property CarbonImmutable|null $updated_at
  * @property-read Visit $visit
  * @property-read Collection<int, BillItem> $items
+ * @property-read Payment|null $payment
  */
 #[Fillable(['visit_id', 'type'])]
 class Bill extends Model
@@ -51,6 +53,14 @@ class Bill extends Model
     public function items(): HasMany
     {
         return $this->hasMany(BillItem::class);
+    }
+
+    /**
+     * @return HasOne<Payment, $this>
+     */
+    public function payment(): HasOne
+    {
+        return $this->hasOne(Payment::class);
     }
 
     public function totalAmountMinor(): int

@@ -1,5 +1,5 @@
-import { Head, Link } from '@inertiajs/react';
-import { textLinkStyles } from '@/components/ui/button';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { ActionLink, textLinkStyles } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
@@ -7,6 +7,8 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { formatMinorAmount } from '@/lib/money';
 import { index } from '@/routes/billing/consultations';
+import { create as paymentCreate } from '@/routes/billing/payments';
+import { show as receiptShow } from '@/routes/billing/receipts';
 import type { ConsultationBill } from '@/types';
 
 type ShowBillProps = {
@@ -22,11 +24,29 @@ function formatDateTime(date: string): string {
 }
 
 export default function ShowBill({ bill, status }: ShowBillProps) {
+    const { props } = usePage();
+    const canRecordPayment =
+        props.auth.capabilities.createPayments && bill.payment === null;
+
     return (
         <>
             <Head title={bill.billNumber} />
             <PageContainer>
                 <PageHeader
+                    actions={
+                        canRecordPayment ? (
+                            <ActionLink href={paymentCreate(bill.id)}>
+                                Record Payment
+                            </ActionLink>
+                        ) : bill.payment?.receipt ? (
+                            <ActionLink
+                                href={receiptShow(bill.payment.receipt.id)}
+                                variant="secondary"
+                            >
+                                View Receipt
+                            </ActionLink>
+                        ) : null
+                    }
                     backLink={
                         <Link className={textLinkStyles} href={index()}>
                             Back to consultation billing queue
@@ -75,7 +95,13 @@ export default function ShowBill({ bill, status }: ShowBillProps) {
                                 Bill status
                             </dt>
                             <dd className="mt-2">
-                                <StatusBadge tone="warning">
+                                <StatusBadge
+                                    tone={
+                                        bill.status.value === 'paid'
+                                            ? 'success'
+                                            : 'warning'
+                                    }
+                                >
                                     {bill.status.label}
                                 </StatusBadge>
                             </dd>
@@ -152,12 +178,63 @@ export default function ShowBill({ bill, status }: ShowBillProps) {
                     </div>
                 </Panel>
 
+                {bill.payment ? (
+                    <Panel className="p-5 sm:p-8">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-text">
+                                    Payment
+                                </h2>
+                                <p className="mt-1 text-sm text-text-secondary">
+                                    Exact consultation Bill payment recorded.
+                                </p>
+                            </div>
+                            {bill.payment.receipt ? (
+                                <ActionLink
+                                    href={receiptShow(bill.payment.receipt.id)}
+                                    size="small"
+                                    variant="secondary"
+                                >
+                                    {bill.payment.receipt.receiptNumber}
+                                </ActionLink>
+                            ) : null}
+                        </div>
+                        <dl className="mt-6 grid gap-x-8 gap-y-5 sm:grid-cols-3">
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Payment reference
+                                </dt>
+                                <dd className="mt-2 text-sm font-medium text-text tabular-nums">
+                                    {bill.payment.paymentNumber}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Method
+                                </dt>
+                                <dd className="mt-2 text-sm text-text">
+                                    {bill.payment.method.label}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Amount paid
+                                </dt>
+                                <dd className="mt-2 text-sm font-semibold text-text tabular-nums">
+                                    {formatMinorAmount(
+                                        bill.payment.amountMinor,
+                                    )}
+                                </dd>
+                            </div>
+                        </dl>
+                    </Panel>
+                ) : null}
+
                 <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6">
                     <h2 className="font-semibold text-info">Next handoff</h2>
                     <p className="mt-1 text-sm leading-6 text-info">
-                        {bill.visit.nextStep}. Payment collection, receipt
-                        issuance, financial clearance, and check-in are not
-                        available in this checkpoint.
+                        {bill.visit.nextStep}. Financial clearance and check-in
+                        remain separate later actions.
                     </p>
                 </Panel>
             </PageContainer>
