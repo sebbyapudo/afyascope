@@ -18,6 +18,7 @@ export type VisitConsultationBill = {
     billNumber: string;
     status: VisitStatus;
     totalAmountMinor: number;
+    isFinanciallyCleared: boolean;
 };
 
 export type VisitSummary = {

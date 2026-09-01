@@ -21,6 +21,8 @@ enum StaffPermission: string
     case BillingCreate = 'billing.create';
     case PaymentsView = 'payments.view';
     case PaymentsCreate = 'payments.create';
+    case ClearanceView = 'clearance.view';
+    case ClearanceCreate = 'clearance.create';
 
     public function displayName(): string
     {
@@ -42,6 +44,8 @@ enum StaffPermission: string
             self::BillingCreate => 'Create bills',
             self::PaymentsView => 'View payments and receipts',
             self::PaymentsCreate => 'Record payments and issue receipts',
+            self::ClearanceView => 'View financial clearance',
+            self::ClearanceCreate => 'Grant financial clearance',
         };
     }
 }

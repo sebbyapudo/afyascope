@@ -168,13 +168,13 @@ it('rejects orphan records and restricts removal of financial history', function
         ->and($receipt->fresh())->not->toBeNull();
 });
 
-it('exposes payment and Receipt records without later clearance or check-in behavior', function () {
+it('exposes payment Receipt and financial-clearance records without check-in behavior', function () {
     expect(Schema::hasTable('payments'))->toBeTrue()
         ->and(Schema::hasTable('receipts'))->toBeTrue()
-        ->and(Schema::hasTable('financial_clearances'))->toBeFalse()
+        ->and(Schema::hasTable('financial_clearances'))->toBeTrue()
         ->and(Route::has('billing.payments.store'))->toBeTrue()
         ->and(Route::has('billing.receipts.show'))->toBeTrue()
-        ->and(Route::has('billing.clearance.store'))->toBeFalse()
+        ->and(Route::has('billing.clearances.store'))->toBeTrue()
         ->and(Route::has('visits.check-in'))->toBeFalse()
         ->and(Route::has('billing.procedure-payments.store'))->toBeFalse();
 });

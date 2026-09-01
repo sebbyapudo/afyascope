@@ -1,11 +1,15 @@
-import { Head, Link } from '@inertiajs/react';
-import { Button, textLinkStyles } from '@/components/ui/button';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { ActionLink, Button, textLinkStyles } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { formatMinorAmount } from '@/lib/money';
+import {
+    create as clearanceCreate,
+    show as clearanceShow,
+} from '@/routes/billing/clearances';
 import { index as paymentIndex } from '@/routes/billing/payments';
 import type { ReceiptDetail } from '@/types';
 
@@ -22,20 +26,39 @@ function formatDateTime(date: string): string {
 }
 
 export default function ReceiptShow({ receipt, status }: ReceiptShowProps) {
+    const { props } = usePage();
+
     return (
         <>
             <Head title={receipt.receiptNumber} />
             <PageContainer width="narrow">
                 <PageHeader
                     actions={
-                        <Button
-                            className="print:hidden"
-                            onClick={() => window.print()}
-                            type="button"
-                            variant="secondary"
-                        >
-                            Print Receipt
-                        </Button>
+                        <div className="flex flex-wrap gap-3 print:hidden">
+                            {receipt.bill.financialClearance &&
+                            props.auth.capabilities.viewClearance ? (
+                                <ActionLink
+                                    href={clearanceShow(
+                                        receipt.bill.financialClearance.id,
+                                    )}
+                                >
+                                    View Clearance
+                                </ActionLink>
+                            ) : props.auth.capabilities.createClearance ? (
+                                <ActionLink
+                                    href={clearanceCreate(receipt.bill.id)}
+                                >
+                                    Grant Financial Clearance
+                                </ActionLink>
+                            ) : null}
+                            <Button
+                                onClick={() => window.print()}
+                                type="button"
+                                variant="secondary"
+                            >
+                                Print Receipt
+                            </Button>
+                        </div>
                     }
                     backLink={
                         <Link
@@ -176,8 +199,8 @@ export default function ReceiptShow({ receipt, status }: ReceiptShowProps) {
                 <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6 print:hidden">
                     <h2 className="font-semibold text-info">Next handoff</h2>
                     <p className="mt-1 text-sm leading-6 text-info">
-                        {receipt.visit.nextStep}. This payment did not grant
-                        financial clearance or check the Patient in.
+                        {receipt.visit.nextStep}. Payment, financial clearance,
+                        and check-in remain separate auditable actions.
                     </p>
                 </Panel>
             </PageContainer>

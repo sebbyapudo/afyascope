@@ -3,6 +3,7 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { index as appointmentIndex } from '@/routes/appointments';
 import { index as auditLogIndex } from '@/routes/audit-logs';
+import { index as clearanceIndex } from '@/routes/billing/clearances';
 import { index as consultationBillingIndex } from '@/routes/billing/consultations';
 import { index as paymentIndex } from '@/routes/billing/payments';
 import { index as patientIndex } from '@/routes/patients';
@@ -68,7 +69,7 @@ export function navigationItems(
         {
             active: isCurrentPath(
                 currentUrl,
-                consultationBillingIndex.url().replace(/\/consultations$/, ''),
+                consultationBillingIndex.url(),
                 true,
             ),
             href: consultationBillingIndex(),
@@ -80,6 +81,12 @@ export function navigationItems(
             href: paymentIndex(),
             label: 'Payments',
             visible: capabilities.viewPayments,
+        },
+        {
+            active: isCurrentPath(currentUrl, clearanceIndex.url(), true),
+            href: clearanceIndex(),
+            label: 'Financial Clearance',
+            visible: capabilities.viewClearance,
         },
         {
             active: isCurrentPath(currentUrl, staffIndex.url(), true),

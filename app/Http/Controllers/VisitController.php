@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Appointment;
 use App\Models\Bill;
+use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Visit;
 use Illuminate\Database\Eloquent\Builder;
@@ -26,6 +27,7 @@ class VisitController extends Controller
                 'appointment:id,appointment_number',
                 'consultationBill.items:id,bill_id,amount_minor',
                 'consultationBill.payment:id,bill_id',
+                'consultationBill.financialClearance:id,bill_id,clearance_number,granted_at',
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
@@ -71,6 +73,7 @@ class VisitController extends Controller
             'appointment:id,appointment_number',
             'consultationBill.items:id,bill_id,amount_minor',
             'consultationBill.payment:id,bill_id',
+            'consultationBill.financialClearance:id,bill_id,clearance_number,granted_at',
         ]);
         $status = $request->session()->get('status');
 
@@ -81,7 +84,7 @@ class VisitController extends Controller
     }
 
     /**
-     * @return array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, consultationBill: array{billNumber: string, status: array{value: string, label: string}, totalAmountMinor: int}|null, appointment: array{id: int, appointmentNumber: string}|null, patient: array{id: int, patientNumber: string, name: string}}
+     * @return array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, consultationBill: array{billNumber: string, status: array{value: string, label: string}, totalAmountMinor: int, isFinanciallyCleared: bool}|null, appointment: array{id: int, appointmentNumber: string}|null, patient: array{id: int, patientNumber: string, name: string}}
      */
     private function visitData(Visit $visit): array
     {
@@ -105,6 +108,7 @@ class VisitController extends Controller
                     'label' => $consultationBill->status->displayName(),
                 ],
                 'totalAmountMinor' => $consultationBill->totalAmountMinor(),
+                'isFinanciallyCleared' => $consultationBill->financialClearance instanceof FinancialClearance,
             ] : null,
             'appointment' => $visit->appointment instanceof Appointment ? [
                 'id' => $visit->appointment->id,

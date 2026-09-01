@@ -37,6 +37,8 @@ enum StaffRole: string
                 StaffPermission::BillingCreate,
                 StaffPermission::PaymentsView,
                 StaffPermission::PaymentsCreate,
+                StaffPermission::ClearanceView,
+                StaffPermission::ClearanceCreate,
             ],
             self::Receptionist => [
                 StaffPermission::DashboardView,

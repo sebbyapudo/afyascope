@@ -6,6 +6,10 @@ import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { formatMinorAmount } from '@/lib/money';
+import {
+    create as clearanceCreate,
+    show as clearanceShow,
+} from '@/routes/billing/clearances';
 import { index } from '@/routes/billing/consultations';
 import { create as paymentCreate } from '@/routes/billing/payments';
 import { show as receiptShow } from '@/routes/billing/receipts';
@@ -27,6 +31,10 @@ export default function ShowBill({ bill, status }: ShowBillProps) {
     const { props } = usePage();
     const canRecordPayment =
         props.auth.capabilities.createPayments && bill.payment === null;
+    const canGrantClearance =
+        props.auth.capabilities.createClearance &&
+        bill.payment !== null &&
+        bill.financialClearance === null;
 
     return (
         <>
@@ -37,6 +45,17 @@ export default function ShowBill({ bill, status }: ShowBillProps) {
                         canRecordPayment ? (
                             <ActionLink href={paymentCreate(bill.id)}>
                                 Record Payment
+                            </ActionLink>
+                        ) : bill.financialClearance &&
+                          props.auth.capabilities.viewClearance ? (
+                            <ActionLink
+                                href={clearanceShow(bill.financialClearance.id)}
+                            >
+                                View Financial Clearance
+                            </ActionLink>
+                        ) : canGrantClearance ? (
+                            <ActionLink href={clearanceCreate(bill.id)}>
+                                Grant Financial Clearance
                             </ActionLink>
                         ) : bill.payment?.receipt ? (
                             <ActionLink
@@ -230,11 +249,42 @@ export default function ShowBill({ bill, status }: ShowBillProps) {
                     </Panel>
                 ) : null}
 
+                {bill.financialClearance ? (
+                    <Panel className="border-success-border bg-success-soft p-5 shadow-none sm:p-6">
+                        <div className="flex flex-wrap items-center justify-between gap-4">
+                            <div>
+                                <h2 className="font-semibold text-success">
+                                    Consultation financially cleared
+                                </h2>
+                                <p className="mt-1 text-sm text-success">
+                                    {bill.financialClearance.clearanceNumber}{' '}
+                                    was granted on{' '}
+                                    {formatDateTime(
+                                        bill.financialClearance.grantedAt,
+                                    )}
+                                    .
+                                </p>
+                            </div>
+                            {props.auth.capabilities.viewClearance ? (
+                                <ActionLink
+                                    href={clearanceShow(
+                                        bill.financialClearance.id,
+                                    )}
+                                    size="small"
+                                    variant="secondary"
+                                >
+                                    View Clearance
+                                </ActionLink>
+                            ) : null}
+                        </div>
+                    </Panel>
+                ) : null}
+
                 <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6">
                     <h2 className="font-semibold text-info">Next handoff</h2>
                     <p className="mt-1 text-sm leading-6 text-info">
                         {bill.visit.nextStep}. Financial clearance and check-in
-                        remain separate later actions.
+                        remain separate auditable actions.
                     </p>
                 </Panel>
             </PageContainer>

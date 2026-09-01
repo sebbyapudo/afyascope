@@ -245,6 +245,7 @@ it('renders the issued Receipt with payment context and no later-stage data', fu
             ])
             ->where('receipt.payment.recordedBy', $accountant->name)
             ->where('receipt.bill.status', ['value' => 'paid', 'label' => 'Paid'])
+            ->where('receipt.bill.financialClearance', null)
             ->where('receipt.visit.status', ['value' => 'created', 'label' => 'Created'])
             ->where('receipt.visit.nextStep', 'Awaiting consultation financial clearance')
             ->where('receipt.patient.patientNumber', $patient->patient_number)
@@ -286,7 +287,7 @@ it('projects paid Bill and awaiting-clearance messaging across existing detail s
                 'receiptNumber' => $receipt->receipt_number,
             ])
             ->where('bill.visit.nextStep', 'Awaiting consultation financial clearance')
-            ->missing('bill.clearance')
+            ->where('bill.financialClearance', null)
             ->missing('bill.checkIn')
         );
 
@@ -347,8 +348,8 @@ it('denies every non-Accountant role from direct payment and Receipt URLs', func
     StaffRole::Management,
 ]);
 
-it('keeps financial clearance check-in procedure payment and deletion routes absent', function () {
-    expect(Route::has('billing.clearance.store'))->toBeFalse()
+it('keeps check-in procedure payment and payment deletion routes absent after clearance routing is introduced', function () {
+    expect(Route::has('billing.clearances.store'))->toBeTrue()
         ->and(Route::has('visits.check-in'))->toBeFalse()
         ->and(Route::has('billing.procedure-payments.store'))->toBeFalse()
         ->and(Route::has('billing.payments.destroy'))->toBeFalse()

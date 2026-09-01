@@ -215,10 +215,11 @@ it('rejects orphan financial records and restricts removal of referenced records
         ->and($item->fresh())->not->toBeNull();
 });
 
-it('keeps later-stage clearance and check-in tables routes and Visit state absent', function () {
+it('keeps financial clearance Bill-scoped while check-in state remains absent', function () {
     $visit = Visit::factory()->create();
 
-    expect(Schema::hasTable('financial_clearances'))->toBeFalse()
+    expect(Schema::hasTable('financial_clearances'))->toBeTrue()
+        ->and(Route::has('billing.clearances.store'))->toBeTrue()
         ->and(Route::has('billing.index'))->toBeFalse()
         ->and(Route::has('visits.check-in'))->toBeFalse()
         ->and(method_exists($visit, 'financialClearance'))->toBeFalse();

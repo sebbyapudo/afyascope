@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Bill;
+use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\Receipt;
@@ -23,6 +24,7 @@ class ReceiptController extends Controller
             'payment:id,bill_id,payment_number,amount_minor,method,recorded_by_user_id,recorded_at',
             'payment.recordedBy:id,name',
             'payment.bill:id,visit_id,bill_number,type,status,created_at',
+            'payment.bill.financialClearance:id,bill_id,clearance_number,granted_at',
             'payment.bill.visit:id,patient_id,visit_number,occurred_at,status',
             'payment.bill.visit.patient:id,patient_number,first_name,middle_name,last_name',
         ]);
@@ -38,6 +40,7 @@ class ReceiptController extends Controller
         $visit = $bill->visit;
         /** @var Patient $patient */
         $patient = $visit->patient;
+        $financialClearance = $bill->financialClearance;
 
         return Inertia::render('billing/receipts/show', [
             'receipt' => [
@@ -54,6 +57,7 @@ class ReceiptController extends Controller
                     'recordedBy' => $recordedBy->name,
                 ],
                 'bill' => [
+                    'id' => $bill->id,
                     'billNumber' => $bill->bill_number,
                     'type' => [
                         'value' => $bill->type->value,
@@ -63,6 +67,11 @@ class ReceiptController extends Controller
                         'value' => $bill->status->value,
                         'label' => $bill->status->displayName(),
                     ],
+                    'financialClearance' => $financialClearance instanceof FinancialClearance ? [
+                        'id' => $financialClearance->id,
+                        'clearanceNumber' => $financialClearance->clearance_number,
+                        'grantedAt' => $financialClearance->granted_at->toIso8601String(),
+                    ] : null,
                 ],
                 'visit' => [
                     'visitNumber' => $visit->visit_number,

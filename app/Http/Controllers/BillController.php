@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\BillType;
 use App\Models\Bill;
 use App\Models\BillItem;
+use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\Receipt;
@@ -26,6 +27,7 @@ class BillController extends Controller
             'items:id,bill_id,description,amount_minor',
             'payment:id,bill_id,payment_number,amount_minor,method,recorded_at',
             'payment.receipt:id,payment_id,receipt_number',
+            'financialClearance:id,bill_id,clearance_number,granted_at',
             'visit:id,patient_id,visit_number,occurred_at,status',
             'visit.patient:id,patient_number,first_name,middle_name,last_name',
         ]);
@@ -37,6 +39,7 @@ class BillController extends Controller
         $patient = $visit->patient;
         $payment = $bill->payment;
         $receipt = $payment instanceof Payment ? $payment->receipt : null;
+        $financialClearance = $bill->financialClearance;
 
         return Inertia::render('billing/show', [
             'bill' => [
@@ -71,6 +74,11 @@ class BillController extends Controller
                         'id' => $receipt->id,
                         'receiptNumber' => $receipt->receipt_number,
                     ] : null,
+                ] : null,
+                'financialClearance' => $financialClearance instanceof FinancialClearance ? [
+                    'id' => $financialClearance->id,
+                    'clearanceNumber' => $financialClearance->clearance_number,
+                    'grantedAt' => $financialClearance->granted_at->toIso8601String(),
                 ] : null,
                 'visit' => [
                     'visitNumber' => $visit->visit_number,

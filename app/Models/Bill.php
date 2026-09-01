@@ -26,6 +26,7 @@ use LogicException;
  * @property CarbonImmutable|null $updated_at
  * @property-read Visit $visit
  * @property-read Collection<int, BillItem> $items
+ * @property-read FinancialClearance|null $financialClearance
  * @property-read Payment|null $payment
  */
 #[Fillable(['visit_id', 'type'])]
@@ -61,6 +62,14 @@ class Bill extends Model
     public function payment(): HasOne
     {
         return $this->hasOne(Payment::class);
+    }
+
+    /**
+     * @return HasOne<FinancialClearance, $this>
+     */
+    public function financialClearance(): HasOne
+    {
+        return $this->hasOne(FinancialClearance::class);
     }
 
     public function totalAmountMinor(): int

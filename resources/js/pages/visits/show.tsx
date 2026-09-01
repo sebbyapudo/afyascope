@@ -140,6 +140,26 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
                                     </StatusBadge>
                                 </dd>
                             </div>
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Financial clearance
+                                </dt>
+                                <dd className="mt-2">
+                                    <StatusBadge
+                                        tone={
+                                            visit.consultationBill
+                                                .isFinanciallyCleared
+                                                ? 'success'
+                                                : 'warning'
+                                        }
+                                    >
+                                        {visit.consultationBill
+                                            .isFinanciallyCleared
+                                            ? 'Financially cleared'
+                                            : 'Not financially cleared'}
+                                    </StatusBadge>
+                                </dd>
+                            </div>
                         </dl>
                     </Panel>
                 ) : null}

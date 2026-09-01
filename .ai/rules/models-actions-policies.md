@@ -13,3 +13,6 @@ Create a consultation Bill only through CreateConsultationBill: authorize billin
 
 ## Record consultation payment and Receipt atomically
 Consultation payment accepts only a locally recorded method; derive the exact positive Bill total server-side. In one retryable transaction, lock/revalidate the open consultation Bill, create one Payment and one Receipt, mark the Bill paid, and record payment.recorded plus receipt.issued. Unique bill_id/payment_id constraints are concurrency backstops. Payment does not grant financial clearance or check in the Visit.
+
+## Grant consultation financial clearance explicitly
+Consultation financial clearance is one immutable record per fully paid consultation Bill, granted only by Accountant through GrantConsultationFinancialClearance. Lock and revalidate the Bill, exact Payment, Receipt, and created Visit in one retryable transaction, then record exactly consultation.financial_cleared. Payment never grants clearance automatically; clearance changes only the derived Visit message to Awaiting Reception check-in and does not check in the Visit.

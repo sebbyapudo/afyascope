@@ -53,6 +53,11 @@ export type ConsultationBill = {
             receiptNumber: string;
         } | null;
     } | null;
+    financialClearance: {
+        id: number;
+        clearanceNumber: string;
+        grantedAt: string;
+    } | null;
     visit: {
         visitNumber: string;
         occurredAt: string;
@@ -104,9 +109,15 @@ export type ReceiptDetail = {
         recordedBy: string;
     };
     bill: {
+        id: number;
         billNumber: string;
         type: BillingLabel;
         status: BillingLabel;
+        financialClearance: {
+            id: number;
+            clearanceNumber: string;
+            grantedAt: string;
+        } | null;
     };
     visit: {
         visitNumber: string;
@@ -118,4 +129,56 @@ export type ReceiptDetail = {
         patientNumber: string;
         name: string;
     };
+};
+
+export type FinancialClearanceQueueBill = {
+    id: number;
+    billNumber: string;
+    billStatus: BillingLabel;
+    totalAmountMinor: number;
+    createdAt: string | null;
+    payment: {
+        paymentNumber: string;
+        amountMinor: number;
+        recordedAt: string;
+        receipt: {
+            id: number;
+            receiptNumber: string;
+        };
+    };
+    visit: {
+        visitNumber: string;
+        occurredAt: string;
+        nextStep: string;
+    };
+    patient: {
+        patientNumber: string;
+        name: string;
+    };
+};
+
+export type FinancialClearanceQueue = {
+    data: FinancialClearanceQueueBill[];
+    pagination: ConsultationBillingQueue['pagination'];
+};
+
+export type FinancialClearanceDetail = {
+    id: number;
+    clearanceNumber: string;
+    grantedAt: string;
+    grantedBy: string;
+    bill: {
+        id: number;
+        billNumber: string;
+        status: BillingLabel;
+        totalAmountMinor: number;
+    };
+    payment: FinancialClearanceQueueBill['payment'];
+    visit: {
+        visitNumber: string;
+        occurredAt: string;
+        status: BillingLabel;
+        nextStep: string;
+    };
+    patient: FinancialClearanceQueueBill['patient'];
 };

@@ -7,6 +7,7 @@ use App\Http\Controllers\AppointmentVisitController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\ConsultationBillingController;
+use App\Http\Controllers\ConsultationFinancialClearanceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PatientAppointmentController;
 use App\Http\Controllers\PatientController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\VisitController;
 use App\Models\Appointment;
 use App\Models\AuditLog;
 use App\Models\Bill;
+use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\User;
@@ -32,6 +34,19 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/billing/clearances', [ConsultationFinancialClearanceController::class, 'index'])
+        ->can('viewAny', FinancialClearance::class)
+        ->name('billing.clearances.index');
+    Route::get('/billing/bills/{bill}/clearance', [ConsultationFinancialClearanceController::class, 'create'])
+        ->can('create', FinancialClearance::class)
+        ->name('billing.clearances.create');
+    Route::post('/billing/bills/{bill}/clearance', [ConsultationFinancialClearanceController::class, 'store'])
+        ->can('create', FinancialClearance::class)
+        ->name('billing.clearances.store');
+    Route::get('/billing/clearances/{financialClearance}', [ConsultationFinancialClearanceController::class, 'show'])
+        ->can('view', 'financialClearance')
+        ->name('billing.clearances.show');
+
     Route::get('/billing/payments', [PaymentController::class, 'index'])
         ->can('viewAny', Payment::class)
         ->name('billing.payments.index');

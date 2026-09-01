@@ -78,16 +78,27 @@ class Visit extends Model
     {
         $consultationBill = $this->relationLoaded('consultationBill')
             ? $this->consultationBill
-            : $this->consultationBill()->with('payment:id,bill_id')->first();
+            : $this->consultationBill()->with([
+                'payment:id,bill_id',
+                'financialClearance:id,bill_id',
+            ])->first();
 
         if ($consultationBill instanceof Bill) {
             $hasPayment = $consultationBill->relationLoaded('payment')
                 ? $consultationBill->payment instanceof Payment
                 : $consultationBill->payment()->exists();
 
-            return $hasPayment
-                ? 'Awaiting consultation financial clearance'
-                : 'Awaiting consultation payment';
+            if (! $hasPayment) {
+                return 'Awaiting consultation payment';
+            }
+
+            $hasFinancialClearance = $consultationBill->relationLoaded('financialClearance')
+                ? $consultationBill->financialClearance instanceof FinancialClearance
+                : $consultationBill->financialClearance()->exists();
+
+            return $hasFinancialClearance
+                ? 'Awaiting Reception check-in'
+                : 'Awaiting consultation financial clearance';
         }
 
         return $this->status->handoffLabel();

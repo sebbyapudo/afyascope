@@ -362,7 +362,7 @@ it('redirects direct confirmation of an already billed Visit to its Bill detail'
         ->assertRedirect(route('billing.bills.show', $bill));
 });
 
-it('exposes consultation payment while keeping procedure billing clearance and check-in absent', function () {
+it('exposes consultation payment and clearance while keeping procedure billing and check-in absent', function () {
     $accountant = consultationBillingAccountant();
     $procedureBill = Bill::factory()->procedure()->create();
 
@@ -372,7 +372,7 @@ it('exposes consultation payment while keeping procedure billing clearance and c
 
     expect(Route::has('billing.payments.store'))->toBeTrue()
         ->and(Route::has('billing.receipts.show'))->toBeTrue()
-        ->and(Route::has('billing.clearance.store'))->toBeFalse()
+        ->and(Route::has('billing.clearances.store'))->toBeTrue()
         ->and(Route::has('visits.check-in'))->toBeFalse()
         ->and(Route::has('billing.procedures.store'))->toBeFalse();
 });
