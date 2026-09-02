@@ -5,6 +5,7 @@ use App\BillType;
 use App\Models\Bill;
 use App\Models\BillItem;
 use App\Models\Patient;
+use App\Models\ProcedureBillingHandoff;
 use App\Models\ServiceCatalogItem;
 use App\Models\Visit;
 use Illuminate\Database\QueryException;
@@ -61,15 +62,20 @@ it('produces unique Bill references during burst-style creation', function () {
 });
 
 it('allows one Bill per financial gate for a Visit', function () {
-    $visit = Visit::factory()->create();
-    $consultationBill = Bill::factory()->for($visit)->create();
-    $procedureBill = Bill::factory()->for($visit)->procedure()->create();
+    $handoff = ProcedureBillingHandoff::factory()->createAuthoritativeDecisionFixture();
+    $visit = $handoff->visit;
+    $consultationBill = $visit->consultationBill;
+    $procedureBill = Bill::factory()->procedure($handoff)->create();
 
     expect($consultationBill->type)->toBe(BillType::Consultation)
         ->and($procedureBill->type)->toBe(BillType::Procedure)
+        ->and($procedureBill->procedureBillingHandoff->is($handoff))->toBeTrue()
         ->and($visit->fresh()->bills)->toHaveCount(2);
 
     expect(fn () => Bill::factory()->for($visit)->create())
+        ->toThrow(QueryException::class);
+
+    expect(fn () => Bill::factory()->procedure($handoff)->create())
         ->toThrow(QueryException::class);
 });
 

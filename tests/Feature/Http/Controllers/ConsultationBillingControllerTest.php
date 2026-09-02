@@ -22,10 +22,6 @@ it('shows only unbilled created Visits in deterministic queue order', function (
     $oldest = Visit::factory()->for($patient)->create([
         'occurred_at' => '2026-09-01 08:00:00',
     ]);
-    $procedureBilled = Visit::factory()->for($patient)->create([
-        'occurred_at' => '2026-09-01 09:00:00',
-    ]);
-    Bill::factory()->for($procedureBilled)->procedure()->create();
     $newest = Visit::factory()->for($patient)->create([
         'occurred_at' => '2026-09-01 10:00:00',
     ]);
@@ -40,10 +36,9 @@ it('shows only unbilled created Visits in deterministic queue order', function (
             ->component('billing/consultations/index')
             ->where('visits.data', fn ($visits): bool => collect($visits)->pluck('id')->all() === [
                 $oldest->id,
-                $procedureBilled->id,
                 $newest->id,
             ])
-            ->where('visits.pagination.total', 3)
+            ->where('visits.pagination.total', 2)
             ->where('visits.data.0.patient.patientNumber', $patient->patient_number)
             ->where('visits.data.0.status', ['value' => 'created', 'label' => 'Created'])
         );

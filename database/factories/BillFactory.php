@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\BillType;
 use App\Models\Bill;
+use App\Models\ProcedureBillingHandoff;
 use App\Models\Visit;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -25,10 +26,17 @@ class BillFactory extends Factory
         ];
     }
 
-    public function procedure(): static
+    public function procedure(?ProcedureBillingHandoff $handoff = null): static
     {
-        return $this->state(fn (): array => [
-            'type' => BillType::Procedure,
-        ]);
+        return $this->state(function () use ($handoff): array {
+            $procedureBillingHandoff = $handoff
+                ?? ProcedureBillingHandoff::factory()->createAuthoritativeDecisionFixture();
+
+            return [
+                'visit_id' => $procedureBillingHandoff->visit_id,
+                'procedure_billing_handoff_id' => $procedureBillingHandoff->id,
+                'type' => BillType::Procedure,
+            ];
+        });
     }
 }

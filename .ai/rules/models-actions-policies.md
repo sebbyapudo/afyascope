@@ -16,3 +16,6 @@ Consultation payment accepts only a locally recorded method; derive the exact po
 
 ## Grant consultation financial clearance explicitly
 Consultation financial clearance is one immutable record per fully paid consultation Bill, granted only by Accountant through GrantConsultationFinancialClearance. Lock and revalidate the Bill, exact Payment, Receipt, and created Visit in one retryable transaction, then record exactly consultation.financial_cleared. Payment never grants clearance automatically; clearance changes only the derived Visit message to Awaiting Reception check-in and does not check in the Visit.
+
+## Require a Doctor procedure handoff before procedure billing
+For MVP, each Visit may have exactly one primary billable ProcedureBillingHandoff and one Bill per Visit/type. checked_in is necessary upstream state but never sufficient evidence of a procedure decision: current production code must reject direct handoff persistence, and only the future authoritative Doctor procedure-decision/order action after consultation may create it. Test data must use the explicitly named authoritative-decision fixture; CreateProcedureBill only consumes a persisted handoff and remains unrouted.

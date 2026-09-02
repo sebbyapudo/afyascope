@@ -20,6 +20,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Collection<int, BillItem> $billItems
+ * @property-read Collection<int, ProcedureBillingHandoff> $procedureBillingHandoffs
  */
 #[Fillable(['name', 'category', 'unit_price_minor', 'is_active'])]
 class ServiceCatalogItem extends Model
@@ -38,6 +39,14 @@ class ServiceCatalogItem extends Model
     public function billItems(): HasMany
     {
         return $this->hasMany(BillItem::class);
+    }
+
+    /**
+     * @return HasMany<ProcedureBillingHandoff, $this>
+     */
+    public function procedureBillingHandoffs(): HasMany
+    {
+        return $this->hasMany(ProcedureBillingHandoff::class);
     }
 
     /**

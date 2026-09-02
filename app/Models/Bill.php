@@ -19,17 +19,19 @@ use LogicException;
 /**
  * @property int $id
  * @property int $visit_id
+ * @property int|null $procedure_billing_handoff_id
  * @property string $bill_number
  * @property BillType $type
  * @property BillStatus $status
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Visit $visit
+ * @property-read ProcedureBillingHandoff|null $procedureBillingHandoff
  * @property-read Collection<int, BillItem> $items
  * @property-read FinancialClearance|null $financialClearance
  * @property-read Payment|null $payment
  */
-#[Fillable(['visit_id', 'type'])]
+#[Fillable(['visit_id', 'procedure_billing_handoff_id', 'type'])]
 class Bill extends Model
 {
     /** @use HasFactory<BillFactory> */
@@ -46,6 +48,14 @@ class Bill extends Model
     public function visit(): BelongsTo
     {
         return $this->belongsTo(Visit::class);
+    }
+
+    /**
+     * @return BelongsTo<ProcedureBillingHandoff, $this>
+     */
+    public function procedureBillingHandoff(): BelongsTo
+    {
+        return $this->belongsTo(ProcedureBillingHandoff::class);
     }
 
     /**
@@ -84,6 +94,17 @@ class Bill extends Model
     protected static function booted(): void
     {
         static::creating(function (Bill $bill): void {
+            if ($bill->type === BillType::Procedure) {
+                $handoff = ProcedureBillingHandoff::query()->find($bill->procedure_billing_handoff_id);
+
+                if (! $handoff instanceof ProcedureBillingHandoff
+                    || $handoff->visit_id !== $bill->visit_id) {
+                    throw new LogicException('A procedure Bill requires its Visit procedure billing handoff.');
+                }
+            } elseif ($bill->procedure_billing_handoff_id !== null) {
+                throw new LogicException('Only a procedure Bill may reference a procedure billing handoff.');
+            }
+
             $bill->bill_number = 'TMP-'.Str::ulid();
             $bill->status = BillStatus::Open;
         });
@@ -98,7 +119,9 @@ class Bill extends Model
                 throw new LogicException('Bill numbers cannot be changed.');
             }
 
-            if ($bill->isDirty('visit_id') || $bill->isDirty('type')) {
+            if ($bill->isDirty('visit_id')
+                || $bill->isDirty('procedure_billing_handoff_id')
+                || $bill->isDirty('type')) {
                 throw new LogicException('A Bill cannot be reassigned to another Visit or billing gate.');
             }
         });

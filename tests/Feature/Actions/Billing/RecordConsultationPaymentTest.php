@@ -87,12 +87,13 @@ it('rejects duplicate payment without another Receipt or audit event', function 
 
 it('rejects a procedure Bill without financial or audit residue', function () {
     $accountant = User::factory()->forRole(StaffRole::Accountant)->create();
-    $visit = Visit::factory()->create();
-    $bill = Bill::factory()->for($visit)->procedure()->create();
+    $bill = Bill::factory()->procedure()->create();
     $service = ServiceCatalogItem::factory()->procedure()->create([
         'unit_price_minor' => 200_000,
     ]);
     BillItem::factory()->for($bill)->for($service, 'serviceCatalogItem')->create();
+    $paymentCount = Payment::query()->count();
+    $receiptCount = Receipt::query()->count();
 
     expect(fn () => app(RecordConsultationPayment::class)->handle(
         $accountant,
@@ -100,8 +101,8 @@ it('rejects a procedure Bill without financial or audit residue', function () {
         PaymentMethod::Cash,
     ))->toThrow(ValidationException::class);
 
-    expect(Payment::query()->count())->toBe(0)
-        ->and(Receipt::query()->count())->toBe(0)
+    expect(Payment::query()->count())->toBe($paymentCount)
+        ->and(Receipt::query()->count())->toBe($receiptCount)
         ->and(AuditLog::query()->count())->toBe(0)
         ->and($bill->fresh()->status)->toBe(BillStatus::Open);
 });

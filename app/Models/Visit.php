@@ -28,6 +28,8 @@ use LogicException;
  * @property-read Appointment|null $appointment
  * @property-read Collection<int, Bill> $bills
  * @property-read Bill|null $consultationBill
+ * @property-read Bill|null $procedureBill
+ * @property-read ProcedureBillingHandoff|null $procedureBillingHandoff
  * @property-read Patient $patient
  * @property-read VisitCheckIn|null $checkIn
  */
@@ -73,6 +75,23 @@ class Visit extends Model
     {
         return $this->hasOne(Bill::class)
             ->where('type', BillType::Consultation->value);
+    }
+
+    /**
+     * @return HasOne<Bill, $this>
+     */
+    public function procedureBill(): HasOne
+    {
+        return $this->hasOne(Bill::class)
+            ->where('type', BillType::Procedure->value);
+    }
+
+    /**
+     * @return HasOne<ProcedureBillingHandoff, $this>
+     */
+    public function procedureBillingHandoff(): HasOne
+    {
+        return $this->hasOne(ProcedureBillingHandoff::class);
     }
 
     /**

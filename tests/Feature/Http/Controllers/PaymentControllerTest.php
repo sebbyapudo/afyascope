@@ -190,6 +190,8 @@ it('rejects procedure Bill payment through direct URLs', function () {
     $bill = Bill::factory()->procedure()->create();
     $service = ServiceCatalogItem::factory()->procedure()->create();
     BillItem::factory()->for($bill)->for($service, 'serviceCatalogItem')->create();
+    $paymentCount = Payment::query()->count();
+    $receiptCount = Receipt::query()->count();
 
     $this->actingAs($accountant)
         ->get(route('billing.payments.create', $bill))
@@ -203,8 +205,8 @@ it('rejects procedure Bill payment through direct URLs', function () {
             'bill' => 'Only an open consultation Bill can receive payment.',
         ]);
 
-    expect(Payment::query()->count())->toBe(0)
-        ->and(Receipt::query()->count())->toBe(0)
+    expect(Payment::query()->count())->toBe($paymentCount)
+        ->and(Receipt::query()->count())->toBe($receiptCount)
         ->and(AuditLog::query()->count())->toBe(0);
 });
 
