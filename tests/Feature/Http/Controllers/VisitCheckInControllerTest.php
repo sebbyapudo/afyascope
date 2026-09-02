@@ -8,6 +8,7 @@ use App\Models\Appointment;
 use App\Models\AuditLog;
 use App\Models\Bill;
 use App\Models\BillItem;
+use App\Models\Consultation;
 use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Payment;
@@ -247,7 +248,8 @@ it('projects checked-in workflow consistently across Visit Patient and linked Ap
 
     expect($appointment->fresh()->status)->toBe(AppointmentStatus::Scheduled)
         ->and($financialClearance->fresh()->bill->visit_id)->toBe($visit->id)
-        ->and(Schema::hasTable('consultations'))->toBeFalse();
+        ->and(Schema::hasTable('consultations'))->toBeTrue()
+        ->and(Consultation::query()->count())->toBe(0);
 });
 
 it('redirects guests from every Reception check-in endpoint', function () {

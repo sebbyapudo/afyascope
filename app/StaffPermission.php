@@ -25,6 +25,8 @@ enum StaffPermission: string
     case ClearanceCreate = 'clearance.create';
     case CheckInView = 'checkin.view';
     case CheckInCreate = 'checkin.create';
+    case ConsultationsView = 'consultations.view';
+    case ConsultationsManage = 'consultations.manage';
 
     public function displayName(): string
     {
@@ -50,6 +52,8 @@ enum StaffPermission: string
             self::ClearanceCreate => 'Grant financial clearance',
             self::CheckInView => 'View Reception check-in',
             self::CheckInCreate => 'Check in patients',
+            self::ConsultationsView => 'View consultations',
+            self::ConsultationsManage => 'Manage consultations',
         };
     }
 }

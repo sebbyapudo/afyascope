@@ -26,3 +26,6 @@ A scheduled Appointment may produce at most one Visit through the Reception hand
 
 ## Reception check-in owns the Doctor-ready transition
 A Visit moves from `created` to `checked_in` only through `CheckInVisit`, after an exact paid consultation Bill, Receipt, and consultation financial clearance are transactionally revalidated. One immutable `VisitCheckIn` per Visit records Receptionist/time/reference and one `visit.checked_in` audit; check-in creates no consultation record.
+
+## Consultation owns clinical progression after check-in
+A checked-in Visit with no Consultation is ready for Doctor consultation; absence represents not started. MVP allows one Consultation per Visit, assigned to an active Doctor, with only in_progress then finalized; finalized records are immutable. Consultation creation/finalization never changes Visit.status or creates ProcedureBillingHandoff; only the future authoritative Doctor procedure-decision action may create that handoff.

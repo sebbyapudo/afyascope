@@ -3,10 +3,13 @@
 namespace App\Models;
 
 use App\BillType;
+use App\ConsultationStatus;
 use App\VisitStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\VisitFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -29,6 +32,7 @@ use LogicException;
  * @property-read Collection<int, Bill> $bills
  * @property-read Bill|null $consultationBill
  * @property-read Bill|null $procedureBill
+ * @property-read Consultation|null $consultation
  * @property-read ProcedureBillingHandoff|null $procedureBillingHandoff
  * @property-read Patient $patient
  * @property-read VisitCheckIn|null $checkIn
@@ -87,6 +91,14 @@ class Visit extends Model
     }
 
     /**
+     * @return HasOne<Consultation, $this>
+     */
+    public function consultation(): HasOne
+    {
+        return $this->hasOne(Consultation::class);
+    }
+
+    /**
      * @return HasOne<ProcedureBillingHandoff, $this>
      */
     public function procedureBillingHandoff(): HasOne
@@ -102,10 +114,80 @@ class Visit extends Model
         return $this->hasOne(VisitCheckIn::class);
     }
 
+    public function isReadyForDoctorConsultation(): bool
+    {
+        if ($this->status !== VisitStatus::CheckedIn) {
+            return false;
+        }
+
+        $hasCheckIn = $this->relationLoaded('checkIn')
+            ? $this->checkIn instanceof VisitCheckIn
+            : $this->checkIn()->exists();
+        $hasConsultation = $this->relationLoaded('consultation')
+            ? $this->consultation instanceof Consultation
+            : $this->consultation()->exists();
+
+        return $hasCheckIn && ! $hasConsultation;
+    }
+
+    public function isInConsultation(): bool
+    {
+        if ($this->status !== VisitStatus::CheckedIn) {
+            return false;
+        }
+
+        $hasCheckIn = $this->relationLoaded('checkIn')
+            ? $this->checkIn instanceof VisitCheckIn
+            : $this->checkIn()->exists();
+        $consultation = $this->relationLoaded('consultation')
+            ? $this->consultation
+            : $this->consultation()->first();
+
+        return $hasCheckIn
+            && $consultation instanceof Consultation
+            && $consultation->status === ConsultationStatus::InProgress;
+    }
+
+    /**
+     * @param  Builder<Visit>  $query
+     * @return Builder<Visit>
+     */
+    #[Scope]
+    protected function readyForDoctorConsultation(Builder $query): Builder
+    {
+        return $query
+            ->where('status', VisitStatus::CheckedIn->value)
+            ->whereHas('checkIn')
+            ->whereDoesntHave('consultation');
+    }
+
+    /**
+     * @param  Builder<Visit>  $query
+     * @return Builder<Visit>
+     */
+    #[Scope]
+    protected function inConsultation(Builder $query): Builder
+    {
+        return $query
+            ->where('status', VisitStatus::CheckedIn->value)
+            ->whereHas('checkIn')
+            ->whereHas('consultation', function (Builder $consultationQuery): void {
+                $consultationQuery->where('status', ConsultationStatus::InProgress->value);
+            });
+    }
+
     public function workflowMessage(): string
     {
         if ($this->status === VisitStatus::CheckedIn) {
-            return VisitStatus::CheckedIn->handoffLabel();
+            $consultation = $this->relationLoaded('consultation')
+                ? $this->consultation
+                : $this->consultation()->first();
+
+            return match ($consultation?->status) {
+                ConsultationStatus::InProgress => 'Consultation in progress',
+                ConsultationStatus::Finalized => 'Consultation completed',
+                default => VisitStatus::CheckedIn->handoffLabel(),
+            };
         }
 
         $consultationBill = $this->relationLoaded('consultationBill')

@@ -29,8 +29,12 @@ enum StaffRole: string
     public function permissions(): array
     {
         return match ($this) {
-            self::Doctor,
             self::Nurse => [StaffPermission::DashboardView],
+            self::Doctor => [
+                StaffPermission::DashboardView,
+                StaffPermission::ConsultationsView,
+                StaffPermission::ConsultationsManage,
+            ],
             self::Accountant => [
                 StaffPermission::DashboardView,
                 StaffPermission::BillingView,
