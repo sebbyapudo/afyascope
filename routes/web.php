@@ -7,6 +7,7 @@ use App\Http\Controllers\AppointmentVisitController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\ConsultationBillingController;
+use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\ConsultationFinancialClearanceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PatientAppointmentController;
@@ -21,6 +22,7 @@ use App\Http\Controllers\VisitController;
 use App\Models\Appointment;
 use App\Models\AuditLog;
 use App\Models\Bill;
+use App\Models\Consultation;
 use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Payment;
@@ -36,6 +38,19 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/clinical/consultations', [ConsultationController::class, 'index'])
+        ->can('viewAny', Consultation::class)
+        ->name('clinical.consultations.index');
+    Route::get('/clinical/consultations/visits/{visit}/create', [ConsultationController::class, 'create'])
+        ->can('create', Consultation::class)
+        ->name('clinical.consultations.create');
+    Route::post('/clinical/consultations/visits/{visit}', [ConsultationController::class, 'store'])
+        ->can('create', Consultation::class)
+        ->name('clinical.consultations.store');
+    Route::get('/clinical/consultations/{consultation}', [ConsultationController::class, 'show'])
+        ->can('view', 'consultation')
+        ->name('clinical.consultations.show');
+
     Route::get('/check-ins', [VisitCheckInController::class, 'index'])
         ->can('viewAny', VisitCheckIn::class)
         ->name('check-ins.index');

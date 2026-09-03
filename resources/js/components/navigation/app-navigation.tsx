@@ -7,6 +7,7 @@ import { index as clearanceIndex } from '@/routes/billing/clearances';
 import { index as consultationBillingIndex } from '@/routes/billing/consultations';
 import { index as paymentIndex } from '@/routes/billing/payments';
 import { index as checkInIndex } from '@/routes/check-ins';
+import { index as clinicalConsultationIndex } from '@/routes/clinical/consultations';
 import { index as patientIndex } from '@/routes/patients';
 import { index as staffIndex } from '@/routes/staff';
 import { index as visitIndex } from '@/routes/visits';
@@ -72,6 +73,16 @@ export function navigationItems(
             href: checkInIndex(),
             label: 'Check-in',
             visible: capabilities.viewCheckIns,
+        },
+        {
+            active: isCurrentPath(
+                currentUrl,
+                clinicalConsultationIndex.url(),
+                true,
+            ),
+            href: clinicalConsultationIndex(),
+            label: 'Clinical Consultations',
+            visible: capabilities.viewConsultations,
         },
         {
             active: isCurrentPath(

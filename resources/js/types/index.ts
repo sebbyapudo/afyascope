@@ -3,6 +3,7 @@ export type * from './appointment';
 export type * from './auth';
 export type * from './billing';
 export type * from './check-in';
+export type * from './consultation';
 export type * from './patient';
 export type * from './staff';
 export type * from './visit';

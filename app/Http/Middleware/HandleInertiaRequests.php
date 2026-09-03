@@ -4,6 +4,7 @@ namespace App\Http\Middleware;
 
 use App\Models\Appointment;
 use App\Models\Bill;
+use App\Models\Consultation;
 use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Payment;
@@ -86,6 +87,8 @@ class HandleInertiaRequests extends Middleware
                     'createClearance' => $user?->can('create', FinancialClearance::class) ?? false,
                     'viewCheckIns' => $user?->can('viewAny', VisitCheckIn::class) ?? false,
                     'createCheckIns' => $user?->can('create', VisitCheckIn::class) ?? false,
+                    'viewConsultations' => $user?->can('viewAny', Consultation::class) ?? false,
+                    'manageConsultations' => $user?->can('create', Consultation::class) ?? false,
                 ],
             ],
         ];

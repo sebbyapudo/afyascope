@@ -31,6 +31,7 @@ class VisitController extends Controller
                 'consultationBill.payment:id,bill_id',
                 'consultationBill.financialClearance:id,bill_id,clearance_number,granted_at',
                 'checkIn:id,visit_id,check_in_number,checked_in_at',
+                'consultation:id,visit_id,status',
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
@@ -78,6 +79,7 @@ class VisitController extends Controller
             'consultationBill.payment:id,bill_id',
             'consultationBill.financialClearance:id,bill_id,clearance_number,granted_at',
             'checkIn:id,visit_id,check_in_number,checked_in_at',
+            'consultation:id,visit_id,status',
         ]);
         $status = $request->session()->get('status');
 

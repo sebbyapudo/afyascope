@@ -49,10 +49,12 @@ it('projects in-progress and finalized Consultation state without changing Visit
         ->and(AuditLog::query()->count())->toBe(0);
 });
 
-it('adds no Doctor workflow routes or operational UI endpoints', function () {
-    expect(Route::has('consultations.index'))->toBeFalse()
-        ->and(Route::has('consultations.store'))->toBeFalse()
-        ->and(Route::has('consultations.update'))->toBeFalse()
-        ->and(Route::has('consultations.finalize'))->toBeFalse()
+it('exposes only the Doctor queue start and immutable workspace routes', function () {
+    expect(Route::has('clinical.consultations.index'))->toBeTrue()
+        ->and(Route::has('clinical.consultations.create'))->toBeTrue()
+        ->and(Route::has('clinical.consultations.store'))->toBeTrue()
+        ->and(Route::has('clinical.consultations.show'))->toBeTrue()
+        ->and(Route::has('clinical.consultations.update'))->toBeFalse()
+        ->and(Route::has('clinical.consultations.finalize'))->toBeFalse()
         ->and(Route::has('procedures.store'))->toBeFalse();
 });

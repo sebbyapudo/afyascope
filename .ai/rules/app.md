@@ -5,6 +5,7 @@ paths:
   - 'app/**/Visit*.php'
   - 'app/**/*Appointment*.php'
   - 'app/**/*{Appointment,Visit}*.php'
+  - 'app/**/*Consultation*.php'
 ---
 
 # App
@@ -29,3 +30,6 @@ A Visit moves from `created` to `checked_in` only through `CheckInVisit`, after 
 
 ## Consultation owns clinical progression after check-in
 A checked-in Visit with no Consultation is ready for Doctor consultation; absence represents not started. MVP allows one Consultation per Visit, assigned to an active Doctor, with only in_progress then finalized; finalized records are immutable. Consultation creation/finalization never changes Visit.status or creates ProcedureBillingHandoff; only the future authoritative Doctor procedure-decision action may create that handoff.
+
+## Begin consultation only through the Doctor action
+BeginConsultation requires an active Doctor, a checked_in Visit, a persisted VisitCheckIn, and no existing Consultation. VisitCheckIn is the authoritative financial-to-clinical handoff, so BeginConsultation must not reload or revalidate Bill, Payment, Receipt, or FinancialClearance. It locks its own prerequisites, creates one in_progress Consultation plus consultation.started audit, leaves Visit.status checked_in, and never creates ProcedureBillingHandoff.

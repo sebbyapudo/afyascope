@@ -31,6 +31,8 @@ export type Capabilities = {
     createClearance: boolean;
     viewCheckIns: boolean;
     createCheckIns: boolean;
+    viewConsultations: boolean;
+    manageConsultations: boolean;
 };
 
 export type Auth = {

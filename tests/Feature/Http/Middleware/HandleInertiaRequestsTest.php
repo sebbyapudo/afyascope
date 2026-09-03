@@ -41,6 +41,8 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'createClearance' => false,
                 'viewCheckIns' => false,
                 'createCheckIns' => false,
+                'viewConsultations' => false,
+                'manageConsultations' => false,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -76,6 +78,8 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'createClearance' => false,
                 'viewCheckIns' => false,
                 'createCheckIns' => false,
+                'viewConsultations' => false,
+                'manageConsultations' => false,
             ])
         );
 });
@@ -104,6 +108,8 @@ test('Receptionist Inertia responses expose only the Patient capabilities grante
             ->where('auth.capabilities.createClearance', false)
             ->where('auth.capabilities.viewCheckIns', true)
             ->where('auth.capabilities.createCheckIns', true)
+            ->where('auth.capabilities.viewConsultations', false)
+            ->where('auth.capabilities.manageConsultations', false)
         );
 });
 
@@ -124,6 +130,32 @@ test('Accountant Inertia responses expose only the billing capabilities granted 
             ->where('auth.capabilities.viewPatients', false)
             ->where('auth.capabilities.viewVisits', false)
             ->where('auth.capabilities.viewAppointments', false)
+            ->where('auth.capabilities.viewUsers', false)
+            ->where('auth.capabilities.viewAudit', false)
+            ->where('auth.capabilities.viewConsultations', false)
+            ->where('auth.capabilities.manageConsultations', false)
+        );
+});
+
+test('Doctor Inertia responses expose only the consultation capabilities granted to the role', function () {
+    $doctor = User::factory()->forRole(StaffRole::Doctor)->create();
+
+    $this->actingAs($doctor)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.capabilities.viewConsultations', true)
+            ->where('auth.capabilities.manageConsultations', true)
+            ->where('auth.capabilities.viewCheckIns', false)
+            ->where('auth.capabilities.createCheckIns', false)
+            ->where('auth.capabilities.viewPatients', false)
+            ->where('auth.capabilities.viewVisits', false)
+            ->where('auth.capabilities.viewAppointments', false)
+            ->where('auth.capabilities.viewBilling', false)
+            ->where('auth.capabilities.createBilling', false)
+            ->where('auth.capabilities.viewPayments', false)
+            ->where('auth.capabilities.createPayments', false)
+            ->where('auth.capabilities.viewClearance', false)
+            ->where('auth.capabilities.createClearance', false)
             ->where('auth.capabilities.viewUsers', false)
             ->where('auth.capabilities.viewAudit', false)
         );

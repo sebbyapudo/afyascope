@@ -19,3 +19,6 @@ Consultation financial clearance is one immutable record per fully paid consulta
 
 ## Require a Doctor procedure handoff before procedure billing
 For MVP, each Visit may have exactly one primary billable ProcedureBillingHandoff and one Bill per Visit/type. checked_in is necessary upstream state but never sufficient evidence of a procedure decision: current production code must reject direct handoff persistence, and only the future authoritative Doctor procedure-decision/order action after consultation may create it. Test data must use the explicitly named authoritative-decision fixture; CreateProcedureBill only consumes a persisted handoff and remains unrouted.
+
+## Trust prior authoritative durable handoffs
+Downstream workflow actions trust the prior authoritative durable handoff rather than revalidating unrelated upstream module internals, unless a business rule explicitly requires otherwise. In particular, a persisted VisitCheckIn is the financial-to-clinical admission boundary for BeginConsultation.
