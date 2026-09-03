@@ -189,6 +189,7 @@ it('shows the workspace to Doctors but only its responsible Doctor may manage it
             ->component('clinical/consultations/show')
             ->where('consultation.consultationNumber', $consultation->consultation_number)
             ->where('consultation.canManage', true)
+            ->where('consultation.canRecordProcedureDecision', true)
             ->has('consultation.doctor', fn (Assert $doctor) => $doctor
                 ->where('id', $responsibleDoctor->id)
                 ->where('name', $responsibleDoctor->name)
@@ -219,7 +220,8 @@ it('shows the workspace to Doctors but only its responsible Doctor may manage it
             ->missing('consultation.visit.receipt')
             ->missing('consultation.visit.auditLogs')
             ->missing('consultation.procedureBillingHandoff')
-            ->missing('consultation.procedureDecision')
+            ->where('consultation.procedureDecision', null)
+            ->where('procedureServices', [])
             ->missing('consultation.finalization')
         );
 
@@ -386,6 +388,7 @@ it('redirects guests from every Doctor consultation endpoint', function () {
     $this->post(route('clinical.consultations.store', $visit))->assertRedirect(route('login'));
     $this->get(route('clinical.consultations.show', $consultation))->assertRedirect(route('login'));
     $this->put(route('clinical.consultations.update', $consultation))->assertRedirect(route('login'));
+    $this->post(route('clinical.consultations.procedure-decision.store', $consultation))->assertRedirect(route('login'));
 });
 
 it('denies every non-Doctor role from direct consultation URLs', function (StaffRole $role) {
@@ -398,6 +401,7 @@ it('denies every non-Doctor role from direct consultation URLs', function (Staff
     $this->actingAs($actor)->post(route('clinical.consultations.store', $visit))->assertForbidden();
     $this->actingAs($actor)->get(route('clinical.consultations.show', $consultation))->assertForbidden();
     $this->actingAs($actor)->put(route('clinical.consultations.update', $consultation))->assertForbidden();
+    $this->actingAs($actor)->post(route('clinical.consultations.procedure-decision.store', $consultation))->assertForbidden();
 })->with([
     StaffRole::Receptionist,
     StaffRole::Accountant,
@@ -442,6 +446,7 @@ it('exposes the assessment update but no finalization or procedure endpoint', fu
         ->and(Route::has('clinical.consultations.store'))->toBeTrue()
         ->and(Route::has('clinical.consultations.show'))->toBeTrue()
         ->and(Route::has('clinical.consultations.update'))->toBeTrue()
+        ->and(Route::has('clinical.consultations.procedure-decision.store'))->toBeTrue()
         ->and(Route::has('clinical.consultations.finalize'))->toBeFalse()
         ->and(Route::has('clinical.assessments.store'))->toBeFalse()
         ->and(Route::has('procedures.store'))->toBeFalse();

@@ -1,4 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import { Button, textLinkStyles } from '@/components/ui/button';
 import { FormField, formControlStyles } from '@/components/ui/form-field';
 import { PageContainer } from '@/components/ui/page-container';
@@ -8,14 +9,18 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { cn } from '@/lib/utils';
 import { index, update } from '@/routes/clinical/consultations';
+import { store as storeProcedureDecision } from '@/routes/clinical/consultations/procedure-decision';
 import type {
     AsaClassificationOption,
     ClinicalConsultationWorkspace,
+    ProcedureDecisionOutcome,
+    ProcedureServiceOption,
 } from '@/types';
 
 type ConsultationShowProps = {
     asaClassifications: AsaClassificationOption[];
     consultation: ClinicalConsultationWorkspace;
+    procedureServices: ProcedureServiceOption[];
     status?: string | null;
 };
 
@@ -74,9 +79,13 @@ function formatDateTime(date: string): string {
 export default function ConsultationShow({
     asaClassifications,
     consultation,
+    procedureServices,
     status,
 }: ConsultationShowProps) {
     const { visit } = consultation;
+    const [procedureOutcome, setProcedureOutcome] = useState<
+        ProcedureDecisionOutcome | ''
+    >('');
 
     return (
         <>
@@ -328,6 +337,293 @@ export default function ConsultationShow({
                                 </dd>
                             </div>
                         </dl>
+                    )}
+                </Panel>
+
+                <Panel className="p-5 sm:p-8">
+                    <div className="mb-6 border-b border-border pb-5">
+                        <h2 className="text-lg font-semibold text-text">
+                            Procedure decision
+                        </h2>
+                        <p className="mt-1 text-sm leading-6 text-text-secondary">
+                            {consultation.procedureDecision
+                                ? 'The authoritative decision is recorded and cannot be changed.'
+                                : consultation.canRecordProcedureDecision
+                                  ? 'Record whether this consultation requires one primary billable procedure.'
+                                  : `Read-only record. Only ${consultation.doctor.name} can record this decision.`}
+                        </p>
+                    </div>
+
+                    {consultation.procedureDecision ? (
+                        <div className="grid gap-6">
+                            <dl className="grid gap-x-8 gap-y-6 sm:grid-cols-2">
+                                <div>
+                                    <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        Decision
+                                    </dt>
+                                    <dd className="mt-2">
+                                        <StatusBadge tone="info">
+                                            {
+                                                consultation.procedureDecision
+                                                    .outcome.label
+                                            }
+                                        </StatusBadge>
+                                        <span className="mt-2 block text-sm text-text-secondary tabular-nums">
+                                            {
+                                                consultation.procedureDecision
+                                                    .decisionNumber
+                                            }
+                                        </span>
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        Recorded
+                                    </dt>
+                                    <dd className="mt-2 text-sm text-text">
+                                        {formatDateTime(
+                                            consultation.procedureDecision
+                                                .decidedAt,
+                                        )}
+                                        <span className="mt-1 block text-text-secondary">
+                                            By {consultation.doctor.name}
+                                        </span>
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        Selected procedure
+                                    </dt>
+                                    <dd className="mt-2 text-sm text-text">
+                                        {consultation.procedureDecision.service
+                                            ?.name ?? 'Not applicable'}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        Billing handoff
+                                    </dt>
+                                    <dd className="mt-2 text-sm text-text">
+                                        {consultation.procedureDecision.handoff
+                                            ?.handoffNumber ?? 'Not created'}
+                                    </dd>
+                                </div>
+                                <div className="sm:col-span-2">
+                                    <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        Clinical rationale
+                                    </dt>
+                                    <dd className="mt-2 text-sm leading-6 whitespace-pre-wrap text-text-secondary">
+                                        {consultation.procedureDecision
+                                            .clinicalRationale ??
+                                            'Not recorded'}
+                                    </dd>
+                                </div>
+                            </dl>
+
+                            <div className="rounded-control border border-info-border bg-info-soft px-4 py-3">
+                                <p className="text-sm font-semibold text-text">
+                                    Next workflow step
+                                </p>
+                                <p className="mt-1 text-sm text-text-secondary">
+                                    {visit.nextStep}
+                                </p>
+                            </div>
+                        </div>
+                    ) : consultation.canRecordProcedureDecision ? (
+                        <Form {...storeProcedureDecision.form(consultation.id)}>
+                            {({ errors, processing }) => (
+                                <div className="grid gap-6">
+                                    {errors.consultation ? (
+                                        <p
+                                            className="rounded-control border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
+                                            role="alert"
+                                        >
+                                            {errors.consultation}
+                                        </p>
+                                    ) : null}
+
+                                    <fieldset>
+                                        <legend className="text-sm font-medium text-text">
+                                            Decision outcome
+                                            <span
+                                                aria-hidden="true"
+                                                className="text-danger"
+                                            >
+                                                {' '}
+                                                *
+                                            </span>
+                                        </legend>
+                                        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                                            <label className="flex cursor-pointer gap-3 rounded-control border border-border bg-surface p-4 transition hover:bg-surface-subtle has-checked:border-brand-primary has-checked:ring-2 has-checked:ring-brand-primary/15">
+                                                <input
+                                                    className="mt-1 size-4 accent-brand-primary"
+                                                    name="outcome"
+                                                    onChange={() =>
+                                                        setProcedureOutcome(
+                                                            'procedure_required',
+                                                        )
+                                                    }
+                                                    required
+                                                    type="radio"
+                                                    value="procedure_required"
+                                                />
+                                                <span>
+                                                    <span className="block text-sm font-semibold text-text">
+                                                        Procedure required
+                                                    </span>
+                                                    <span className="mt-1 block text-xs leading-5 text-text-secondary">
+                                                        Select the clinically
+                                                        determined procedure and
+                                                        send it for billing.
+                                                    </span>
+                                                </span>
+                                            </label>
+                                            <label className="flex cursor-pointer gap-3 rounded-control border border-border bg-surface p-4 transition hover:bg-surface-subtle has-checked:border-brand-primary has-checked:ring-2 has-checked:ring-brand-primary/15">
+                                                <input
+                                                    className="mt-1 size-4 accent-brand-primary"
+                                                    name="outcome"
+                                                    onChange={() =>
+                                                        setProcedureOutcome(
+                                                            'no_procedure',
+                                                        )
+                                                    }
+                                                    required
+                                                    type="radio"
+                                                    value="no_procedure"
+                                                />
+                                                <span>
+                                                    <span className="block text-sm font-semibold text-text">
+                                                        No procedure required
+                                                    </span>
+                                                    <span className="mt-1 block text-xs leading-5 text-text-secondary">
+                                                        Record that no billable
+                                                        procedure is required
+                                                        for this Visit.
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        </div>
+                                        {errors.outcome ? (
+                                            <p
+                                                className="mt-2 text-sm text-danger"
+                                                role="alert"
+                                            >
+                                                {errors.outcome}
+                                            </p>
+                                        ) : null}
+                                    </fieldset>
+
+                                    {procedureOutcome ===
+                                    'procedure_required' ? (
+                                        <FormField
+                                            error={
+                                                errors.service_catalog_item_id
+                                            }
+                                            hint="Only active procedure services are available. Prices remain controlled by Billing."
+                                            id="procedure-service"
+                                            label="Procedure service"
+                                            required
+                                        >
+                                            <select
+                                                aria-describedby={
+                                                    errors.service_catalog_item_id
+                                                        ? 'procedure-service-error'
+                                                        : 'procedure-service-hint'
+                                                }
+                                                aria-invalid={Boolean(
+                                                    errors.service_catalog_item_id,
+                                                )}
+                                                className={formControlStyles}
+                                                defaultValue=""
+                                                id="procedure-service"
+                                                name="service_catalog_item_id"
+                                                required
+                                            >
+                                                <option disabled value="">
+                                                    Select procedure
+                                                </option>
+                                                {procedureServices.map(
+                                                    (service) => (
+                                                        <option
+                                                            key={service.id}
+                                                            value={service.id}
+                                                        >
+                                                            {service.name}
+                                                        </option>
+                                                    ),
+                                                )}
+                                            </select>
+                                        </FormField>
+                                    ) : null}
+
+                                    <FormField
+                                        error={errors.clinical_rationale}
+                                        hint="Optional concise clinical rationale. This narrative is not copied into the audit log."
+                                        id="clinical-rationale"
+                                        label="Clinical rationale"
+                                    >
+                                        <textarea
+                                            aria-describedby={
+                                                errors.clinical_rationale
+                                                    ? 'clinical-rationale-error'
+                                                    : 'clinical-rationale-hint'
+                                            }
+                                            aria-invalid={Boolean(
+                                                errors.clinical_rationale,
+                                            )}
+                                            className={cn(
+                                                formControlStyles,
+                                                'min-h-28 resize-y py-3',
+                                            )}
+                                            id="clinical-rationale"
+                                            maxLength={2000}
+                                            name="clinical_rationale"
+                                            rows={4}
+                                        />
+                                    </FormField>
+
+                                    <div>
+                                        <label className="flex max-w-2xl gap-3 rounded-control border border-warning-border bg-warning-soft p-4">
+                                            <input
+                                                className="mt-1 size-4 accent-brand-primary"
+                                                name="confirmed"
+                                                required
+                                                type="checkbox"
+                                                value="1"
+                                            />
+                                            <span className="text-sm leading-6 text-text">
+                                                I confirm this authoritative
+                                                procedure decision. It cannot be
+                                                changed or deleted in the MVP.
+                                            </span>
+                                        </label>
+                                        {errors.confirmed ? (
+                                            <p
+                                                className="mt-2 text-sm text-danger"
+                                                role="alert"
+                                            >
+                                                {errors.confirmed}
+                                            </p>
+                                        ) : null}
+                                    </div>
+
+                                    <div>
+                                        <Button
+                                            disabled={processing}
+                                            type="submit"
+                                        >
+                                            {processing
+                                                ? 'Recording decision…'
+                                                : 'Record procedure decision'}
+                                        </Button>
+                                    </div>
+                                </div>
+                            )}
+                        </Form>
+                    ) : (
+                        <p className="text-sm leading-6 text-text-secondary">
+                            No procedure decision has been recorded.
+                        </p>
                     )}
                 </Panel>
             </PageContainer>

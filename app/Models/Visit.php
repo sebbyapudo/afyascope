@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\BillType;
 use App\ConsultationStatus;
+use App\ProcedureDecisionOutcome;
 use App\VisitStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\VisitFactory;
@@ -34,6 +35,7 @@ use LogicException;
  * @property-read Bill|null $procedureBill
  * @property-read Consultation|null $consultation
  * @property-read ProcedureBillingHandoff|null $procedureBillingHandoff
+ * @property-read ProcedureDecision|null $procedureDecision
  * @property-read Patient $patient
  * @property-read VisitCheckIn|null $checkIn
  */
@@ -104,6 +106,12 @@ class Visit extends Model
     public function procedureBillingHandoff(): HasOne
     {
         return $this->hasOne(ProcedureBillingHandoff::class);
+    }
+
+    /** @return HasOne<ProcedureDecision, $this> */
+    public function procedureDecision(): HasOne
+    {
+        return $this->hasOne(ProcedureDecision::class);
     }
 
     /**
@@ -183,11 +191,21 @@ class Visit extends Model
                 ? $this->consultation
                 : $this->consultation()->first();
 
-            return match ($consultation?->status) {
-                ConsultationStatus::InProgress => 'Consultation in progress',
-                ConsultationStatus::Finalized => 'Consultation completed',
-                default => VisitStatus::CheckedIn->handoffLabel(),
-            };
+            if ($consultation?->status === ConsultationStatus::InProgress) {
+                $procedureDecision = $this->relationLoaded('procedureDecision')
+                    ? $this->procedureDecision
+                    : $this->procedureDecision()->first();
+
+                return match ($procedureDecision?->outcome) {
+                    ProcedureDecisionOutcome::ProcedureRequired => 'Awaiting procedure billing',
+                    ProcedureDecisionOutcome::NoProcedure => 'No procedure required',
+                    default => 'Consultation in progress',
+                };
+            }
+
+            return $consultation?->status === ConsultationStatus::Finalized
+                ? 'Consultation completed'
+                : VisitStatus::CheckedIn->handoffLabel();
         }
 
         $consultationBill = $this->relationLoaded('consultationBill')

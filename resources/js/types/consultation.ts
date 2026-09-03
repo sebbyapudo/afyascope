@@ -49,6 +49,29 @@ export type ClinicalAssessment = {
 
 export type ClinicalConsultationWorkspace = ClinicalConsultation & {
     assessment: ClinicalAssessment;
+    canRecordProcedureDecision: boolean;
+    procedureDecision: ClinicalProcedureDecision | null;
+};
+
+export type ProcedureDecisionOutcome = 'no_procedure' | 'procedure_required';
+
+export type ClinicalProcedureDecision = {
+    decisionNumber: string;
+    outcome: {
+        value: ProcedureDecisionOutcome;
+        label: string;
+    };
+    clinicalRationale: string | null;
+    decidedAt: string;
+    service: ProcedureServiceOption | null;
+    handoff: {
+        handoffNumber: string;
+    } | null;
+};
+
+export type ProcedureServiceOption = {
+    id: number;
+    name: string;
 };
 
 export type AsaClassificationOption = {

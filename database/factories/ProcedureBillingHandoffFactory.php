@@ -2,7 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Models\Consultation;
 use App\Models\ProcedureBillingHandoff;
+use App\Models\ProcedureDecision;
 use App\Models\ServiceCatalogItem;
 use App\Models\User;
 use App\Models\VisitCheckIn;
@@ -40,11 +42,23 @@ class ProcedureBillingHandoffFactory extends Factory
     {
         unset($attributes['handoff_number'], $attributes['decided_at']);
 
-        $handoff = $this->makeOne($attributes);
-        $handoff->saveQuietly();
-        $handoff->handoff_number = sprintf('PBH-%06d', $handoff->id);
-        $handoff->saveQuietly();
+        $draft = $this->makeOne($attributes);
+        $consultation = Consultation::query()
+            ->where('visit_id', $draft->visit_id)
+            ->first();
 
-        return $handoff;
+        if (! $consultation instanceof Consultation) {
+            $consultation = Consultation::factory()
+                ->for($draft->visit)
+                ->for($draft->decidedBy, 'doctor')
+                ->create();
+        }
+
+        $decision = ProcedureDecision::factory()
+            ->for($consultation)
+            ->procedureRequired($draft->serviceCatalogItem)
+            ->createAuthoritativeDecisionFixture();
+
+        return ProcedureBillingHandoff::createFromProcedureDecision($decision);
     }
 }

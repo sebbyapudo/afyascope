@@ -22,6 +22,7 @@ enum AuditAction: string
     case VisitCheckedIn = 'visit.checked_in';
     case ConsultationStarted = 'consultation.started';
     case ConsultationAssessmentUpdated = 'consultation.assessment_updated';
+    case ConsultationProcedureDecided = 'consultation.procedure_decided';
 
     public function displayName(): string
     {
@@ -44,6 +45,7 @@ enum AuditAction: string
             self::VisitCheckedIn => 'Visit checked in',
             self::ConsultationStarted => 'Consultation started',
             self::ConsultationAssessmentUpdated => 'Consultation assessment updated',
+            self::ConsultationProcedureDecided => 'Consultation procedure decided',
         };
     }
 }

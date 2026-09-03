@@ -5,11 +5,15 @@ namespace App\Http\Controllers;
 use App\Actions\Consultations\BeginConsultation;
 use App\Actions\Consultations\UpdateConsultationAssessment;
 use App\AsaClassification;
+use App\BillType;
 use App\ConsultationStatus;
 use App\Http\Requests\StoreConsultationRequest;
 use App\Http\Requests\UpdateConsultationAssessmentRequest;
 use App\Models\Consultation;
 use App\Models\Patient;
+use App\Models\ProcedureBillingHandoff;
+use App\Models\ProcedureDecision;
+use App\Models\ServiceCatalogItem;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitCheckIn;
@@ -64,6 +68,7 @@ class ConsultationController extends Controller
                 'visit:id,patient_id,visit_number,occurred_at,status',
                 'visit.patient:id,patient_number,first_name,middle_name,last_name',
                 'visit.checkIn:id,visit_id,check_in_number,checked_in_at',
+                'visit.procedureDecision:id,visit_id,outcome',
             ])
             ->orderByDesc('started_at')
             ->orderByDesc('id')
@@ -133,17 +138,38 @@ class ConsultationController extends Controller
     {
         $consultation->load([
             'doctor:id,name',
+            'procedureDecision:id,consultation_id,visit_id,doctor_user_id,service_catalog_item_id,decision_number,outcome,clinical_rationale,decided_at',
+            'procedureDecision.procedureBillingHandoff:id,procedure_decision_id,handoff_number',
+            'procedureDecision.serviceCatalogItem:id,name',
             'visit:id,patient_id,visit_number,occurred_at,status',
             'visit.patient:id,patient_number,first_name,middle_name,last_name',
             'visit.checkIn:id,visit_id,check_in_number,checked_in_at',
+            'visit.procedureDecision:id,visit_id,outcome',
         ]);
         $status = $request->session()->get('status');
+        $canManage = $request->user()?->can('update', $consultation) ?? false;
+        $canRecordProcedureDecision = $canManage
+            && ! $consultation->procedureDecision instanceof ProcedureDecision;
 
         return Inertia::render('clinical/consultations/show', [
             'consultation' => $this->consultationWorkspaceData(
                 $consultation,
-                $request->user()?->can('update', $consultation) ?? false,
+                $canManage,
             ),
+            'procedureServices' => $canRecordProcedureDecision
+                ? ServiceCatalogItem::query()
+                    ->select(['id', 'name'])
+                    ->where('category', BillType::Procedure->value)
+                    ->where('is_active', true)
+                    ->orderBy('name')
+                    ->orderBy('id')
+                    ->get()
+                    ->map(fn (ServiceCatalogItem $service): array => [
+                        'id' => $service->id,
+                        'name' => $service->name,
+                    ])
+                    ->values()
+                : [],
             'asaClassifications' => array_map(
                 fn (AsaClassification $classification): array => [
                     'value' => $classification->value,
@@ -234,12 +260,16 @@ class ConsultationController extends Controller
     }
 
     /**
-     * @return array{id: int, consultationNumber: string, status: array{value: string, label: string}, startedAt: string, canManage: bool, doctor: array{id: int, name: string}, visit: array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, checkIn: array{checkInNumber: string, checkedInAt: string}, patient: array{patientNumber: string, name: string}}, assessment: array{presentingComplaint: string|null, relevantHistory: string|null, currentMedications: string|null, allergies: string|null, examinationFindings: string|null, asaClassification: string|null, assessmentImpression: string|null, planNotes: string|null}}
+     * @return array{id: int, consultationNumber: string, status: array{value: string, label: string}, startedAt: string, canManage: bool, canRecordProcedureDecision: bool, doctor: array{id: int, name: string}, visit: array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, checkIn: array{checkInNumber: string, checkedInAt: string}, patient: array{patientNumber: string, name: string}}, assessment: array{presentingComplaint: string|null, relevantHistory: string|null, currentMedications: string|null, allergies: string|null, examinationFindings: string|null, asaClassification: string|null, assessmentImpression: string|null, planNotes: string|null}, procedureDecision: array{decisionNumber: string, outcome: array{value: string, label: string}, clinicalRationale: string|null, decidedAt: string, service: array{id: int, name: string}|null, handoff: array{handoffNumber: string}|null}|null}
      */
     private function consultationWorkspaceData(Consultation $consultation, bool $canManage): array
     {
+        $procedureDecision = $consultation->procedureDecision;
+
         return [
             ...$this->consultationData($consultation, $canManage),
+            'canRecordProcedureDecision' => $canManage
+                && ! $procedureDecision instanceof ProcedureDecision,
             'assessment' => [
                 'presentingComplaint' => $consultation->presenting_complaint,
                 'relevantHistory' => $consultation->relevant_history,
@@ -250,6 +280,22 @@ class ConsultationController extends Controller
                 'assessmentImpression' => $consultation->assessment_impression,
                 'planNotes' => $consultation->plan_notes,
             ],
+            'procedureDecision' => $procedureDecision instanceof ProcedureDecision ? [
+                'decisionNumber' => $procedureDecision->decision_number,
+                'outcome' => [
+                    'value' => $procedureDecision->outcome->value,
+                    'label' => $procedureDecision->outcome->displayName(),
+                ],
+                'clinicalRationale' => $procedureDecision->clinical_rationale,
+                'decidedAt' => $procedureDecision->decided_at->toIso8601String(),
+                'service' => $procedureDecision->serviceCatalogItem instanceof ServiceCatalogItem ? [
+                    'id' => $procedureDecision->serviceCatalogItem->id,
+                    'name' => $procedureDecision->serviceCatalogItem->name,
+                ] : null,
+                'handoff' => $procedureDecision->procedureBillingHandoff instanceof ProcedureBillingHandoff ? [
+                    'handoffNumber' => $procedureDecision->procedureBillingHandoff->handoff_number,
+                ] : null,
+            ] : null,
         ];
     }
 

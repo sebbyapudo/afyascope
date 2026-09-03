@@ -15,6 +15,7 @@ use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicateController;
 use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProcedureDecisionController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitCheckInController;
@@ -53,6 +54,9 @@ Route::middleware('auth')->group(function (): void {
     Route::put('/clinical/consultations/{consultation}', [ConsultationController::class, 'update'])
         ->can('update', 'consultation')
         ->name('clinical.consultations.update');
+    Route::post('/clinical/consultations/{consultation}/procedure-decision', ProcedureDecisionController::class)
+        ->can('update', 'consultation')
+        ->name('clinical.consultations.procedure-decision.store');
 
     Route::get('/check-ins', [VisitCheckInController::class, 'index'])
         ->can('viewAny', VisitCheckIn::class)

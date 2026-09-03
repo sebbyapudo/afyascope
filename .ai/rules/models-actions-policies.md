@@ -22,3 +22,6 @@ For MVP, each Visit may have exactly one primary billable ProcedureBillingHandof
 
 ## Trust prior authoritative durable handoffs
 Downstream workflow actions trust the prior authoritative durable handoff rather than revalidating unrelated upstream module internals, unless a business rule explicitly requires otherwise. In particular, a persisted VisitCheckIn is the financial-to-clinical admission boundary for BeginConsultation.
+
+## Create procedure handoffs only from the Doctor decision
+Record exactly one immutable ProcedureDecision per in-progress Consultation/Visit through RecordProcedureDecision by its responsible active Doctor. procedure_required must select one active procedure-category service and atomically creates the sole ProcedureBillingHandoff; no_procedure creates no handoff. Checked-in state alone never authorizes a handoff, and neither branch creates a Bill or changes Consultation/Visit lifecycle.

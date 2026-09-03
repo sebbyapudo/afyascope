@@ -226,6 +226,7 @@ class PatientController extends Controller
             ->with('consultationBill.payment:id,bill_id')
             ->with('consultationBill.financialClearance:id,bill_id')
             ->with('consultation:id,visit_id,status')
+            ->with('procedureDecision:id,visit_id,outcome')
             ->orderByDesc('occurred_at')
             ->orderByDesc('id')
             ->paginate(10, ['*'], 'visits_page')

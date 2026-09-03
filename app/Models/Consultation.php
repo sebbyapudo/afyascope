@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -36,6 +37,7 @@ use LogicException;
  * @property CarbonImmutable|null $updated_at
  * @property-read Visit $visit
  * @property-read User $doctor
+ * @property-read ProcedureDecision|null $procedureDecision
  */
 #[Fillable(['visit_id', 'doctor_user_id'])]
 class Consultation extends Model
@@ -62,6 +64,12 @@ class Consultation extends Model
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'doctor_user_id');
+    }
+
+    /** @return HasOne<ProcedureDecision, $this> */
+    public function procedureDecision(): HasOne
+    {
+        return $this->hasOne(ProcedureDecision::class);
     }
 
     public function isFinalized(): bool

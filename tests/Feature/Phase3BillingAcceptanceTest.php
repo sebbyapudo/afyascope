@@ -482,7 +482,7 @@ it('keeps procedure billing dependent on one authoritative Doctor handoff', func
 
     expect(fn () => $directHandoff->save())->toThrow(
         LogicException::class,
-        'Procedure billing handoffs are reserved for the future authoritative Doctor procedure-decision workflow.',
+        'Procedure billing handoffs require the authoritative Doctor procedure-decision workflow.',
     );
     expect(fn () => app(CreateProcedureBill::class)->handle(
         $accountant,

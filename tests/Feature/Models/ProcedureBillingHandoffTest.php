@@ -42,7 +42,7 @@ it('rejects direct handoff persistence even when the Visit is checked in', funct
 
     expect(fn () => $handoff->save())->toThrow(
         LogicException::class,
-        'Procedure billing handoffs are reserved for the future authoritative Doctor procedure-decision workflow.',
+        'Procedure billing handoffs require the authoritative Doctor procedure-decision workflow.',
     );
 
     expect(ProcedureBillingHandoff::query()->count())->toBe(0)
@@ -108,6 +108,8 @@ it('requires a legitimate handoff for model-created procedure Bills and keeps co
 
 it('adds only the structural foundation without procedure or clinical routes', function () {
     expect(Schema::hasTable('procedure_billing_handoffs'))->toBeTrue()
+        ->and(Schema::hasTable('procedure_decisions'))->toBeTrue()
+        ->and(Schema::hasColumn('procedure_billing_handoffs', 'procedure_decision_id'))->toBeTrue()
         ->and(Schema::hasColumn('bills', 'procedure_billing_handoff_id'))->toBeTrue()
         ->and(Route::has('billing.procedures.index'))->toBeFalse()
         ->and(Route::has('billing.procedures.store'))->toBeFalse()

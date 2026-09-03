@@ -38,7 +38,7 @@ it('creates one open procedure Bill from a durable Doctor handoff with an audite
         ->and($bill->items->sole()->description)->toBe('Upper gastrointestinal endoscopy')
         ->and($bill->items->sole()->amount_minor)->toBe(350_050)
         ->and($visit->fresh()->status)->toBe(VisitStatus::CheckedIn)
-        ->and($visit->fresh()->workflowMessage())->toBe('Ready for Doctor consultation');
+        ->and($visit->fresh()->workflowMessage())->toBe('Awaiting procedure billing');
 
     $auditLog = AuditLog::query()->sole();
 
