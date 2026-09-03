@@ -33,3 +33,6 @@ A checked-in Visit with no Consultation is ready for Doctor consultation; absenc
 
 ## Begin consultation only through the Doctor action
 BeginConsultation requires an active Doctor, a checked_in Visit, a persisted VisitCheckIn, and no existing Consultation. VisitCheckIn is the authoritative financial-to-clinical handoff, so BeginConsultation must not reload or revalidate Bill, Payment, Receipt, or FinancialClearance. It locks its own prerequisites, creates one in_progress Consultation plus consultation.started audit, leaves Visit.status checked_in, and never creates ProcedureBillingHandoff.
+
+## Consultation assessment stays within the active Doctor-owned record
+Clinical assessment fields live directly on Consultation and may be changed only through UpdateConsultationAssessment while the record is in_progress by its responsible active Doctor. Normalize optional empty text to null; never copy clinical narratives into audit data (record only references and changed field names). Assessment updates do not change Consultation/Visit lifecycle or create ProcedureBillingHandoff; finalized Consultations remain immutable.

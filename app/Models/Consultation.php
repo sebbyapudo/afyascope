@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\AsaClassification;
 use App\ConsultationStatus;
 use App\StaffRole;
 use App\VisitStatus;
@@ -23,6 +24,14 @@ use LogicException;
  * @property ConsultationStatus $status
  * @property CarbonImmutable $started_at
  * @property CarbonImmutable|null $finalized_at
+ * @property string|null $presenting_complaint
+ * @property string|null $relevant_history
+ * @property string|null $current_medications
+ * @property string|null $allergies
+ * @property string|null $examination_findings
+ * @property AsaClassification|null $asa_classification
+ * @property string|null $assessment_impression
+ * @property string|null $plan_notes
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Visit $visit
@@ -129,6 +138,7 @@ class Consultation extends Model
     {
         return [
             'status' => ConsultationStatus::class,
+            'asa_classification' => AsaClassification::class,
             'started_at' => 'immutable_datetime',
             'finalized_at' => 'immutable_datetime',
         ];

@@ -49,12 +49,12 @@ it('projects in-progress and finalized Consultation state without changing Visit
         ->and(AuditLog::query()->count())->toBe(0);
 });
 
-it('exposes only the Doctor queue start and immutable workspace routes', function () {
+it('exposes only the Doctor queue start and assessment workspace routes', function () {
     expect(Route::has('clinical.consultations.index'))->toBeTrue()
         ->and(Route::has('clinical.consultations.create'))->toBeTrue()
         ->and(Route::has('clinical.consultations.store'))->toBeTrue()
         ->and(Route::has('clinical.consultations.show'))->toBeTrue()
-        ->and(Route::has('clinical.consultations.update'))->toBeFalse()
+        ->and(Route::has('clinical.consultations.update'))->toBeTrue()
         ->and(Route::has('clinical.consultations.finalize'))->toBeFalse()
         ->and(Route::has('procedures.store'))->toBeFalse();
 });

@@ -50,6 +50,9 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/clinical/consultations/{consultation}', [ConsultationController::class, 'show'])
         ->can('view', 'consultation')
         ->name('clinical.consultations.show');
+    Route::put('/clinical/consultations/{consultation}', [ConsultationController::class, 'update'])
+        ->can('update', 'consultation')
+        ->name('clinical.consultations.update');
 
     Route::get('/check-ins', [VisitCheckInController::class, 'index'])
         ->can('viewAny', VisitCheckIn::class)

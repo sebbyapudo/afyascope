@@ -1,5 +1,6 @@
 <?php
 
+use App\AsaClassification;
 use App\ConsultationStatus;
 use App\Models\Consultation;
 use App\Models\User;
@@ -25,8 +26,19 @@ it('relates one Consultation to its checked-in Visit and responsible Doctor', fu
         ->and($consultation->status)->toBe(ConsultationStatus::InProgress)
         ->and($consultation->finalized_at)->toBeNull()
         ->and($visit->fresh()->status)->toBe(VisitStatus::CheckedIn)
+        ->and(Schema::hasColumns('consultations', [
+            'presenting_complaint',
+            'relevant_history',
+            'current_medications',
+            'allergies',
+            'examination_findings',
+            'asa_classification',
+            'assessment_impression',
+            'plan_notes',
+        ]))->toBeTrue()
         ->and(Schema::hasColumn('consultations', 'patient_id'))->toBeFalse()
-        ->and(Schema::hasColumn('consultations', 'procedure_id'))->toBeFalse();
+        ->and(Schema::hasColumn('consultations', 'procedure_id'))->toBeFalse()
+        ->and(Schema::hasTable('consultation_assessments'))->toBeFalse();
 });
 
 it('generates an immutable server-controlled sequential reference and start state', function () {
@@ -137,4 +149,15 @@ it('defines the minimal lifecycle while reserving transitions for authoritative 
         LogicException::class,
         'Finalized Consultations cannot be changed.',
     );
+});
+
+it('defines only the supported optional ASA classifications', function () {
+    expect(AsaClassification::cases())->toBe([
+        AsaClassification::One,
+        AsaClassification::Two,
+        AsaClassification::Three,
+        AsaClassification::Four,
+        AsaClassification::Five,
+        AsaClassification::Six,
+    ]);
 });
