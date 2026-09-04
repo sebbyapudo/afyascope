@@ -6,6 +6,7 @@ import { index as auditLogIndex } from '@/routes/audit-logs';
 import { index as clearanceIndex } from '@/routes/billing/clearances';
 import { index as consultationBillingIndex } from '@/routes/billing/consultations';
 import { index as paymentIndex } from '@/routes/billing/payments';
+import { index as procedureBillingIndex } from '@/routes/billing/procedures';
 import { index as checkInIndex } from '@/routes/check-ins';
 import { index as clinicalConsultationIndex } from '@/routes/clinical/consultations';
 import { index as patientIndex } from '@/routes/patients';
@@ -92,6 +93,16 @@ export function navigationItems(
             ),
             href: consultationBillingIndex(),
             label: 'Consultation Billing',
+            visible: capabilities.viewBilling,
+        },
+        {
+            active: isCurrentPath(
+                currentUrl,
+                procedureBillingIndex.url(),
+                true,
+            ),
+            href: procedureBillingIndex(),
+            label: 'Procedure Billing',
             visible: capabilities.viewBilling,
         },
         {

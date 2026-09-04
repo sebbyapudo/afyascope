@@ -196,11 +196,39 @@ class Visit extends Model
                     ? $this->procedureDecision
                     : $this->procedureDecision()->first();
 
-                return match ($procedureDecision?->outcome) {
-                    ProcedureDecisionOutcome::ProcedureRequired => 'Awaiting procedure billing',
-                    ProcedureDecisionOutcome::NoProcedure => 'No procedure required',
-                    default => 'Consultation in progress',
-                };
+                if ($procedureDecision?->outcome === ProcedureDecisionOutcome::ProcedureRequired) {
+                    $procedureBill = $this->relationLoaded('procedureBill')
+                        ? $this->procedureBill
+                        : $this->procedureBill()->with([
+                            'payment:id,bill_id',
+                            'payment.receipt:id,payment_id',
+                            'financialClearance:id,bill_id',
+                        ])->first();
+
+                    if (! $procedureBill instanceof Bill) {
+                        return 'Awaiting procedure billing';
+                    }
+
+                    $payment = $procedureBill->relationLoaded('payment')
+                        ? $procedureBill->payment
+                        : $procedureBill->payment()->with('receipt:id,payment_id')->first();
+
+                    if (! $payment instanceof Payment || ! $payment->receipt instanceof Receipt) {
+                        return 'Awaiting procedure payment';
+                    }
+
+                    $hasFinancialClearance = $procedureBill->relationLoaded('financialClearance')
+                        ? $procedureBill->financialClearance instanceof FinancialClearance
+                        : $procedureBill->financialClearance()->exists();
+
+                    return $hasFinancialClearance
+                        ? 'Ready for Nursing preparation'
+                        : 'Awaiting procedure financial clearance';
+                }
+
+                return $procedureDecision?->outcome === ProcedureDecisionOutcome::NoProcedure
+                    ? 'No procedure required'
+                    : 'Consultation in progress';
             }
 
             return $consultation?->status === ConsultationStatus::Finalized

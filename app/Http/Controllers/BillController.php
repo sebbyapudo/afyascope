@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\BillType;
 use App\Models\Bill;
 use App\Models\BillItem;
 use App\Models\FinancialClearance;
@@ -21,8 +20,6 @@ class BillController extends Controller
      */
     public function __invoke(Request $request, Bill $bill): Response
     {
-        abort_unless($bill->type === BillType::Consultation, 404);
-
         $bill->load([
             'items:id,bill_id,description,amount_minor',
             'payment:id,bill_id,payment_number,amount_minor,method,recorded_at',

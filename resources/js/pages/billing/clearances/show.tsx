@@ -27,6 +27,8 @@ export default function FinancialClearanceShow({
     clearance,
     status,
 }: FinancialClearanceShowProps) {
+    const isProcedure = clearance.bill.type.value === 'procedure';
+
     return (
         <>
             <Head title={clearance.clearanceNumber} />
@@ -45,7 +47,7 @@ export default function FinancialClearanceShow({
                             Back to financial clearance queue
                         </Link>
                     }
-                    description="Immutable consultation financial clearance record"
+                    description={`Immutable ${clearance.bill.type.label.toLowerCase()} financial clearance record`}
                     eyebrow={clearance.clearanceNumber}
                     title={clearance.patient.name}
                 />
@@ -63,7 +65,7 @@ export default function FinancialClearanceShow({
                     <div className="mb-6 flex flex-wrap items-start justify-between gap-4 border-b border-border pb-6">
                         <div>
                             <h2 className="text-lg font-semibold text-text">
-                                Consultation financially cleared
+                                {clearance.bill.type.label} financially cleared
                             </h2>
                             <p className="mt-1 text-sm text-text-secondary">
                                 Granted {formatDateTime(clearance.grantedAt)} by{' '}
@@ -96,6 +98,14 @@ export default function FinancialClearanceShow({
                                 <span className="mt-1 block font-normal text-text-secondary">
                                     {formatDateTime(clearance.visit.occurredAt)}
                                 </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                Financial gate
+                            </dt>
+                            <dd className="mt-2 text-sm font-medium text-text">
+                                {clearance.bill.type.label}
                             </dd>
                         </div>
                         <div>
@@ -146,8 +156,11 @@ export default function FinancialClearanceShow({
                     <h2 className="font-semibold text-info">Next handoff</h2>
                     <p className="mt-1 text-sm leading-6 text-info">
                         {clearance.visit.nextStep}. The Visit remains{' '}
-                        {clearance.visit.status.label}; Reception check-in is
-                        not part of this action.
+                        {clearance.visit.status.label}; this action does not{' '}
+                        {isProcedure
+                            ? 'create Nursing preparation records'
+                            : 'check the Patient in'}
+                        .
                     </p>
                 </Panel>
             </PageContainer>

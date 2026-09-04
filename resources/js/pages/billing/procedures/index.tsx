@@ -7,12 +7,11 @@ import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { formatMinorAmount } from '@/lib/money';
-import { create, index } from '@/routes/billing/clearances';
-import { show as receiptShow } from '@/routes/billing/receipts';
-import type { FinancialClearanceQueue } from '@/types';
+import { create, index } from '@/routes/billing/procedures';
+import type { ProcedureBillingQueue } from '@/types';
 
-type FinancialClearanceIndexProps = {
-    bills: FinancialClearanceQueue;
+type ProcedureBillingIndexProps = {
+    handoffs: ProcedureBillingQueue;
 };
 
 function formatDateTime(date: string): string {
@@ -22,25 +21,25 @@ function formatDateTime(date: string): string {
     }).format(new Date(date));
 }
 
-export default function FinancialClearanceIndex({
-    bills,
-}: FinancialClearanceIndexProps) {
-    const { data, pagination } = bills;
+export default function ProcedureBillingIndex({
+    handoffs,
+}: ProcedureBillingIndexProps) {
+    const { data, pagination } = handoffs;
 
     return (
         <>
-            <Head title="Financial clearance" />
+            <Head title="Procedure billing" />
             <PageContainer width="wide">
                 <PageHeader
-                    description="Review fully paid consultation and procedure Bills, then grant the distinct clearance for the correct financial gate."
-                    title="Financial clearance"
+                    description="Create a procedure Bill only from the Doctor's authoritative procedure decision and billing handoff."
+                    title="Procedure billing queue"
                 />
 
                 <Panel className="overflow-hidden">
                     {data.length === 0 ? (
                         <EmptyState
-                            description="Paid Bills leave this queue after their financial clearance is granted."
-                            title="No Bills awaiting clearance"
+                            description="Procedure-required decisions leave this queue when their procedure Bill is created."
+                            title="No procedures awaiting billing"
                         />
                     ) : (
                         <div className="overflow-x-auto">
@@ -48,7 +47,7 @@ export default function FinancialClearanceIndex({
                                 <thead className="bg-surface-subtle text-xs font-semibold tracking-wide text-text-secondary uppercase">
                                     <tr>
                                         <th className="px-5 py-4" scope="col">
-                                            Bill
+                                            Handoff
                                         </th>
                                         <th className="px-5 py-4" scope="col">
                                             Patient
@@ -57,13 +56,7 @@ export default function FinancialClearanceIndex({
                                             Visit
                                         </th>
                                         <th className="px-5 py-4" scope="col">
-                                            Gate
-                                        </th>
-                                        <th className="px-5 py-4" scope="col">
-                                            Paid
-                                        </th>
-                                        <th className="px-5 py-4" scope="col">
-                                            Receipt
+                                            Procedure
                                         </th>
                                         <th className="px-5 py-4" scope="col">
                                             State
@@ -77,64 +70,55 @@ export default function FinancialClearanceIndex({
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-border">
-                                    {data.map((bill) => (
+                                    {data.map((handoff) => (
                                         <tr
                                             className="transition-colors hover:bg-canvas"
-                                            key={bill.id}
+                                            key={handoff.id}
                                         >
                                             <td className="px-5 py-4 font-semibold text-brand-primary tabular-nums">
-                                                {bill.billNumber}
+                                                {handoff.handoffNumber}
                                                 <span className="mt-1 block text-xs font-normal text-text-secondary">
-                                                    Paid{' '}
                                                     {formatDateTime(
-                                                        bill.payment.recordedAt,
+                                                        handoff.decidedAt,
                                                     )}
                                                 </span>
                                             </td>
                                             <td className="px-5 py-4">
                                                 <p className="font-medium text-text">
-                                                    {bill.patient.name}
+                                                    {handoff.patient.name}
                                                 </p>
                                                 <p className="mt-1 text-xs text-text-secondary tabular-nums">
-                                                    {bill.patient.patientNumber}
+                                                    {
+                                                        handoff.patient
+                                                            .patientNumber
+                                                    }
                                                 </p>
                                             </td>
                                             <td className="px-5 py-4 text-text-secondary tabular-nums">
-                                                {bill.visit.visitNumber}
-                                            </td>
-                                            <td className="px-5 py-4 text-text-secondary">
-                                                {bill.billType.label}
-                                            </td>
-                                            <td className="px-5 py-4 font-semibold text-text tabular-nums">
-                                                {formatMinorAmount(
-                                                    bill.payment.amountMinor,
-                                                )}
+                                                {handoff.visit.visitNumber}
                                             </td>
                                             <td className="px-5 py-4">
-                                                <ActionLink
-                                                    href={receiptShow(
-                                                        bill.payment.receipt.id,
+                                                <p className="font-medium text-text">
+                                                    {handoff.procedure.name}
+                                                </p>
+                                                <p className="mt-1 text-text-secondary tabular-nums">
+                                                    {formatMinorAmount(
+                                                        handoff.procedure
+                                                            .amountMinor,
                                                     )}
-                                                    size="small"
-                                                    variant="secondary"
-                                                >
-                                                    {
-                                                        bill.payment.receipt
-                                                            .receiptNumber
-                                                    }
-                                                </ActionLink>
+                                                </p>
                                             </td>
                                             <td className="px-5 py-4">
                                                 <StatusBadge tone="warning">
-                                                    Awaiting clearance
+                                                    Awaiting billing
                                                 </StatusBadge>
                                             </td>
                                             <td className="px-5 py-4 text-right">
                                                 <ActionLink
-                                                    href={create(bill.id)}
+                                                    href={create(handoff.id)}
                                                     size="small"
                                                 >
-                                                    Review Clearance
+                                                    Create Bill
                                                 </ActionLink>
                                             </td>
                                         </tr>
@@ -151,7 +135,7 @@ export default function FinancialClearanceIndex({
                                 {pagination.total}
                             </p>
                             <nav
-                                aria-label="Financial clearance queue pagination"
+                                aria-label="Procedure billing queue pagination"
                                 className="flex items-center gap-2"
                             >
                                 {pagination.currentPage > 1 ? (
@@ -192,4 +176,4 @@ export default function FinancialClearanceIndex({
     );
 }
 
-FinancialClearanceIndex.layout = [AuthenticatedLayout];
+ProcedureBillingIndex.layout = [AuthenticatedLayout];

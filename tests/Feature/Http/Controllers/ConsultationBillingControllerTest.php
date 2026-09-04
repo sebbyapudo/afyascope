@@ -357,19 +357,22 @@ it('redirects direct confirmation of an already billed Visit to its Bill detail'
         ->assertRedirect(route('billing.bills.show', $bill));
 });
 
-it('exposes consultation payment and clearance while keeping procedure billing and check-in absent', function () {
+it('exposes both financial gates while keeping check-in out of billing', function () {
     $accountant = consultationBillingAccountant();
     $procedureBill = Bill::factory()->procedure()->create();
 
     $this->actingAs($accountant)
         ->get(route('billing.bills.show', $procedureBill))
-        ->assertNotFound();
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('billing/show')
+            ->where('bill.type', ['value' => 'procedure', 'label' => 'Procedure'])
+        );
 
     expect(Route::has('billing.payments.store'))->toBeTrue()
         ->and(Route::has('billing.receipts.show'))->toBeTrue()
         ->and(Route::has('billing.clearances.store'))->toBeTrue()
         ->and(Route::has('visits.check-in'))->toBeFalse()
-        ->and(Route::has('billing.procedures.store'))->toBeFalse();
+        ->and(Route::has('billing.procedures.store'))->toBeTrue();
 });
 
 function consultationBillingAccountant(): User

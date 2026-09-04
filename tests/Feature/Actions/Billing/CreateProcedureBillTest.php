@@ -14,6 +14,7 @@ use App\Models\User;
 use App\StaffRole;
 use App\VisitStatus;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 it('creates one open procedure Bill from a durable Doctor handoff with an audited price snapshot', function () {
@@ -38,7 +39,7 @@ it('creates one open procedure Bill from a durable Doctor handoff with an audite
         ->and($bill->items->sole()->description)->toBe('Upper gastrointestinal endoscopy')
         ->and($bill->items->sole()->amount_minor)->toBe(350_050)
         ->and($visit->fresh()->status)->toBe(VisitStatus::CheckedIn)
-        ->and($visit->fresh()->workflowMessage())->toBe('Awaiting procedure billing');
+        ->and($visit->fresh()->workflowMessage())->toBe('Awaiting procedure payment');
 
     $auditLog = AuditLog::query()->sole();
 
@@ -87,6 +88,24 @@ it('rejects a missing handoff and an inactive selected service without financial
     expect(fn () => app(CreateProcedureBill::class)->handle(
         $accountant,
         $handoff,
+    ))->toThrow(ValidationException::class);
+
+    expect(Bill::query()->where('type', BillType::Procedure)->count())->toBe(0)
+        ->and(AuditLog::query()->count())->toBe(0);
+});
+
+it('rejects a handoff that no longer matches its authoritative procedure decision', function () {
+    $accountant = User::factory()->forRole(StaffRole::Accountant)->create();
+    $handoff = ProcedureBillingHandoff::factory()->createAuthoritativeDecisionFixture();
+    $otherProcedure = ServiceCatalogItem::factory()->procedure()->create();
+
+    DB::table('procedure_billing_handoffs')
+        ->where('id', $handoff->id)
+        ->update(['service_catalog_item_id' => $otherProcedure->id]);
+
+    expect(fn () => app(CreateProcedureBill::class)->handle(
+        $accountant,
+        $handoff->fresh(),
     ))->toThrow(ValidationException::class);
 
     expect(Bill::query()->where('type', BillType::Procedure)->count())->toBe(0)

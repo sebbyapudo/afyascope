@@ -65,10 +65,10 @@ export default function ReceiptShow({ receipt, status }: ReceiptShowProps) {
                             className={`${textLinkStyles} print:hidden`}
                             href={paymentIndex()}
                         >
-                            Back to consultation payments
+                            Back to payments
                         </Link>
                     }
-                    description="Consultation payment receipt"
+                    description={`${receipt.bill.type.label} payment receipt`}
                     eyebrow={receipt.receiptNumber}
                     title="Payment received"
                 />
@@ -199,8 +199,9 @@ export default function ReceiptShow({ receipt, status }: ReceiptShowProps) {
                 <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6 print:hidden">
                     <h2 className="font-semibold text-info">Next handoff</h2>
                     <p className="mt-1 text-sm leading-6 text-info">
-                        {receipt.visit.nextStep}. Payment, financial clearance,
-                        and check-in remain separate auditable actions.
+                        {receipt.visit.nextStep}. Payment and financial
+                        clearance remain separate auditable actions for this{' '}
+                        {receipt.bill.type.label.toLowerCase()} gate.
                     </p>
                 </Panel>
             </PageContainer>

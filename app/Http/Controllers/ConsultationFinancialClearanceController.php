@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Billing\GrantConsultationFinancialClearance;
+use App\Actions\Billing\GrantProcedureFinancialClearance;
 use App\BillStatus;
 use App\BillType;
 use App\Http\Requests\StoreConsultationFinancialClearanceRequest;
@@ -10,9 +11,13 @@ use App\Models\Bill;
 use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\ProcedureBillingHandoff;
+use App\Models\ProcedureDecision;
 use App\Models\Receipt;
 use App\Models\User;
 use App\Models\Visit;
+use App\ProcedureDecisionOutcome;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -23,8 +28,18 @@ class ConsultationFinancialClearanceController extends Controller
     public function index(): Response
     {
         $bills = Bill::query()
-            ->select(['id', 'visit_id', 'bill_number', 'type', 'status', 'created_at'])
-            ->where('type', BillType::Consultation->value)
+            ->select(['id', 'visit_id', 'procedure_billing_handoff_id', 'bill_number', 'type', 'status', 'created_at'])
+            ->where(function (Builder $query): void {
+                $query
+                    ->where('type', BillType::Consultation->value)
+                    ->orWhere(function (Builder $procedureQuery): void {
+                        $procedureQuery
+                            ->where('type', BillType::Procedure->value)
+                            ->whereHas('procedureBillingHandoff.procedureDecision', function (Builder $decisionQuery): void {
+                                $decisionQuery->where('outcome', ProcedureDecisionOutcome::ProcedureRequired->value);
+                            });
+                    });
+            })
             ->where('status', BillStatus::Paid->value)
             ->whereHas('payment.receipt')
             ->whereDoesntHave('financialClearance')
@@ -57,7 +72,11 @@ class ConsultationFinancialClearanceController extends Controller
 
     public function create(Bill $bill): Response|RedirectResponse
     {
-        abort_unless($bill->type === BillType::Consultation, 404);
+        abort_unless(in_array($bill->type, [BillType::Consultation, BillType::Procedure], true), 404);
+
+        if ($bill->type === BillType::Procedure) {
+            abort_unless($this->hasValidProcedureFoundation($bill), 404);
+        }
 
         $existingClearance = $bill->financialClearance()->first();
 
@@ -88,6 +107,7 @@ class ConsultationFinancialClearanceController extends Controller
         StoreConsultationFinancialClearanceRequest $request,
         Bill $bill,
         GrantConsultationFinancialClearance $grantConsultationFinancialClearance,
+        GrantProcedureFinancialClearance $grantProcedureFinancialClearance,
     ): RedirectResponse {
         $actor = $request->user();
 
@@ -95,7 +115,10 @@ class ConsultationFinancialClearanceController extends Controller
             abort(403);
         }
 
-        $financialClearance = $grantConsultationFinancialClearance->handle($actor, $bill);
+        $financialClearance = match ($bill->type) {
+            BillType::Consultation => $grantConsultationFinancialClearance->handle($actor, $bill),
+            BillType::Procedure => $grantProcedureFinancialClearance->handle($actor, $bill),
+        };
 
         return redirect()->route('billing.clearances.show', $financialClearance)->with(
             'status',
@@ -114,7 +137,6 @@ class ConsultationFinancialClearanceController extends Controller
             'bill.visit.patient:id,patient_number,first_name,middle_name,last_name',
             'grantedBy:id,name',
         ]);
-        abort_unless($financialClearance->bill->type === BillType::Consultation, 404);
         $status = $request->session()->get('status');
 
         return Inertia::render('billing/clearances/show', [
@@ -124,7 +146,7 @@ class ConsultationFinancialClearanceController extends Controller
     }
 
     /**
-     * @return array{id: int, billNumber: string, billStatus: array{value: string, label: string}, totalAmountMinor: int, createdAt: string|null, payment: array{paymentNumber: string, amountMinor: int, recordedAt: string, receipt: array{id: int, receiptNumber: string}}, visit: array{visitNumber: string, occurredAt: string, nextStep: string}, patient: array{patientNumber: string, name: string}}
+     * @return array{id: int, billNumber: string, billType: array{value: string, label: string}, billStatus: array{value: string, label: string}, totalAmountMinor: int, createdAt: string|null, payment: array{paymentNumber: string, amountMinor: int, recordedAt: string, receipt: array{id: int, receiptNumber: string}}, visit: array{visitNumber: string, occurredAt: string, nextStep: string}, patient: array{patientNumber: string, name: string}}
      */
     private function billData(Bill $bill): array
     {
@@ -140,6 +162,10 @@ class ConsultationFinancialClearanceController extends Controller
         return [
             'id' => $bill->id,
             'billNumber' => $bill->bill_number,
+            'billType' => [
+                'value' => $bill->type->value,
+                'label' => $bill->type->displayName(),
+            ],
             'billStatus' => [
                 'value' => $bill->status->value,
                 'label' => $bill->status->displayName(),
@@ -168,7 +194,7 @@ class ConsultationFinancialClearanceController extends Controller
     }
 
     /**
-     * @return array{id: int, clearanceNumber: string, grantedAt: string, grantedBy: string, bill: array{id: int, billNumber: string, status: array{value: string, label: string}, totalAmountMinor: int}, payment: array{paymentNumber: string, amountMinor: int, receipt: array{id: int, receiptNumber: string}}, visit: array{visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string}, patient: array{patientNumber: string, name: string}}
+     * @return array{id: int, clearanceNumber: string, grantedAt: string, grantedBy: string, bill: array{id: int, billNumber: string, type: array{value: string, label: string}, status: array{value: string, label: string}, totalAmountMinor: int}, payment: array{paymentNumber: string, amountMinor: int, recordedAt: string, receipt: array{id: int, receiptNumber: string}}, visit: array{visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string}, patient: array{patientNumber: string, name: string}}
      */
     private function clearanceData(FinancialClearance $financialClearance): array
     {
@@ -184,6 +210,7 @@ class ConsultationFinancialClearanceController extends Controller
             'bill' => [
                 'id' => $billData['id'],
                 'billNumber' => $billData['billNumber'],
+                'type' => $billData['billType'],
                 'status' => $billData['billStatus'],
                 'totalAmountMinor' => $billData['totalAmountMinor'],
             ],
@@ -208,5 +235,19 @@ class ConsultationFinancialClearanceController extends Controller
             $patient->middle_name,
             $patient->last_name,
         ])->filter()->implode(' ');
+    }
+
+    private function hasValidProcedureFoundation(Bill $bill): bool
+    {
+        $bill->loadMissing('procedureBillingHandoff.procedureDecision');
+        $handoff = $bill->procedureBillingHandoff;
+        $decision = $handoff instanceof ProcedureBillingHandoff
+            ? $handoff->procedureDecision
+            : null;
+
+        return $handoff instanceof ProcedureBillingHandoff
+            && $decision instanceof ProcedureDecision
+            && $handoff->visit_id === $bill->visit_id
+            && $handoff->matchesAuthoritativeDecision($decision);
     }
 }

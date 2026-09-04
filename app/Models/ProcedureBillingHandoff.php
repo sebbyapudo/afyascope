@@ -81,6 +81,16 @@ class ProcedureBillingHandoff extends Model
         return $this->hasOne(Bill::class);
     }
 
+    public function matchesAuthoritativeDecision(ProcedureDecision $decision): bool
+    {
+        return $decision->exists
+            && $decision->outcome === ProcedureDecisionOutcome::ProcedureRequired
+            && $this->procedure_decision_id === $decision->getKey()
+            && $this->visit_id === $decision->visit_id
+            && $this->service_catalog_item_id === $decision->service_catalog_item_id
+            && $this->decided_by_user_id === $decision->doctor_user_id;
+    }
+
     public static function createFromProcedureDecision(ProcedureDecision $decision): self
     {
         $consultation = $decision->consultation;

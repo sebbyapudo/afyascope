@@ -15,6 +15,7 @@ use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicateController;
 use App\Http\Controllers\PatientVisitController;
 use App\Http\Controllers\PaymentController;
+use App\Http\Controllers\ProcedureBillingController;
 use App\Http\Controllers\ProcedureDecisionController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\StaffUserController;
@@ -106,6 +107,15 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/billing/consultations/{visit}', [ConsultationBillingController::class, 'store'])
         ->can('create', Bill::class)
         ->name('billing.consultations.store');
+    Route::get('/billing/procedures', [ProcedureBillingController::class, 'index'])
+        ->can('viewAny', Bill::class)
+        ->name('billing.procedures.index');
+    Route::get('/billing/procedures/{procedureBillingHandoff}/create', [ProcedureBillingController::class, 'create'])
+        ->can('create', Bill::class)
+        ->name('billing.procedures.create');
+    Route::post('/billing/procedures/{procedureBillingHandoff}', [ProcedureBillingController::class, 'store'])
+        ->can('create', Bill::class)
+        ->name('billing.procedures.store');
     Route::get('/billing/bills/{bill}', BillController::class)
         ->can('view', 'bill')
         ->name('billing.bills.show');

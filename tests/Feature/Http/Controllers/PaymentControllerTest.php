@@ -18,7 +18,7 @@ use App\StaffRole;
 use Illuminate\Support\Facades\Route;
 use Inertia\Testing\AssertableInertia as Assert;
 
-it('shows only open unpaid consultation Bills in deterministic queue order', function () {
+it('shows open unpaid consultation and procedure Bills in deterministic queue order', function () {
     $accountant = paymentControllerAccountant();
     $patient = Patient::factory()->create([
         'first_name' => 'Amina',
@@ -47,11 +47,14 @@ it('shows only open unpaid consultation Bills in deterministic queue order', fun
             ->component('billing/payments/index')
             ->where('bills.data', fn ($bills): bool => collect($bills)->pluck('id')->all() === [
                 $oldest->id,
+                $procedure->id,
                 $newest->id,
             ])
-            ->where('bills.pagination.total', 2)
+            ->where('bills.pagination.total', 3)
             ->where('bills.data.0.patient.patientNumber', $patient->patient_number)
             ->where('bills.data.0.totalAmountMinor', 80_000)
+            ->where('bills.data.0.type.value', 'consultation')
+            ->where('bills.data.1.type.value', 'procedure')
             ->missing('bills.data.0.patient_id')
             ->missing('bills.data.0.payment')
         );
@@ -185,29 +188,29 @@ it('rejects duplicate payment attempts without residue', function () {
         ->and(AuditLog::query()->count())->toBe(2);
 });
 
-it('rejects procedure Bill payment through direct URLs', function () {
+it('records procedure Bill payment through the shared payment URLs', function () {
     $accountant = paymentControllerAccountant();
     $bill = Bill::factory()->procedure()->create();
     $service = ServiceCatalogItem::factory()->procedure()->create();
     BillItem::factory()->for($bill)->for($service, 'serviceCatalogItem')->create();
-    $paymentCount = Payment::query()->count();
-    $receiptCount = Receipt::query()->count();
-
     $this->actingAs($accountant)
         ->get(route('billing.payments.create', $bill))
-        ->assertNotFound();
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('billing/payments/create')
+            ->where('bill.type', ['value' => 'procedure', 'label' => 'Procedure'])
+        );
 
     $this->actingAs($accountant)
         ->post(route('billing.payments.store', $bill), [
             'payment_method' => PaymentMethod::Cash->value,
         ])
-        ->assertSessionHasErrors([
-            'bill' => 'Only an open consultation Bill can receive payment.',
-        ]);
+        ->assertRedirect();
 
-    expect(Payment::query()->count())->toBe($paymentCount)
-        ->and(Receipt::query()->count())->toBe($receiptCount)
-        ->and(AuditLog::query()->count())->toBe(0);
+    expect(Payment::query()->where('bill_id', $bill->id)->count())->toBe(1)
+        ->and(Receipt::query()->whereHas('payment', fn ($query) => $query->where('bill_id', $bill->id))->count())->toBe(1)
+        ->and($bill->fresh()->status)->toBe(BillStatus::Paid)
+        ->and(AuditLog::query()->where('action', AuditAction::PaymentRecorded)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::ReceiptIssued)->count())->toBe(1);
 });
 
 it('redirects confirmation for an already paid Bill to its Receipt', function () {
@@ -350,10 +353,10 @@ it('denies every non-Accountant role from direct payment and Receipt URLs', func
     StaffRole::Management,
 ]);
 
-it('keeps check-in procedure payment and payment deletion routes absent after clearance routing is introduced', function () {
+it('keeps check-in and payment deletion routes absent after procedure payment is activated', function () {
     expect(Route::has('billing.clearances.store'))->toBeTrue()
         ->and(Route::has('visits.check-in'))->toBeFalse()
-        ->and(Route::has('billing.procedure-payments.store'))->toBeFalse()
+        ->and(Route::has('billing.payments.store'))->toBeTrue()
         ->and(Route::has('billing.payments.destroy'))->toBeFalse()
         ->and(Route::has('billing.receipts.destroy'))->toBeFalse();
 });

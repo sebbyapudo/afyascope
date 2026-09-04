@@ -278,8 +278,8 @@ it('logs out an inactive responsible Doctor before recording a decision', functi
 
 it('adds only the decision endpoint and no procedure billing or execution routes', function () {
     expect(Route::has('clinical.consultations.procedure-decision.store'))->toBeTrue()
-        ->and(Route::has('billing.procedures.index'))->toBeFalse()
-        ->and(Route::has('billing.procedures.store'))->toBeFalse()
+        ->and(Route::has('billing.procedures.index'))->toBeTrue()
+        ->and(Route::has('billing.procedures.store'))->toBeTrue()
         ->and(Route::has('clinical.consultations.finalize'))->toBeFalse()
         ->and(Route::has('clinical.procedures.perform'))->toBeFalse();
 });

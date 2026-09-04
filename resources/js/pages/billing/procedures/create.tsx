@@ -6,13 +6,11 @@ import { Panel } from '@/components/ui/panel';
 import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { formatMinorAmount } from '@/lib/money';
-import { show as billShow } from '@/routes/billing/bills';
-import { store } from '@/routes/billing/clearances';
-import { show as receiptShow } from '@/routes/billing/receipts';
-import type { FinancialClearanceQueueBill } from '@/types';
+import { index, store } from '@/routes/billing/procedures';
+import type { ProcedureBillingHandoff } from '@/types';
 
-type CreateFinancialClearanceProps = {
-    bill: FinancialClearanceQueueBill;
+type CreateProcedureBillProps = {
+    handoff: ProcedureBillingHandoff;
 };
 
 function formatDateTime(date: string): string {
@@ -22,27 +20,22 @@ function formatDateTime(date: string): string {
     }).format(new Date(date));
 }
 
-export default function CreateFinancialClearance({
-    bill,
-}: CreateFinancialClearanceProps) {
-    const isProcedure = bill.billType.value === 'procedure';
-
+export default function CreateProcedureBill({
+    handoff,
+}: CreateProcedureBillProps) {
     return (
         <>
-            <Head title={`Clearance ${bill.billNumber}`} />
+            <Head title={`Bill ${handoff.visit.visitNumber}`} />
             <PageContainer width="narrow">
                 <PageHeader
                     backLink={
-                        <Link
-                            className={textLinkStyles}
-                            href={billShow(bill.id)}
-                        >
-                            Back to Bill
+                        <Link className={textLinkStyles} href={index()}>
+                            Back to procedure billing queue
                         </Link>
                     }
-                    description={`Confirm the paid ${bill.billType.label.toLowerCase()} obligation before granting its separate financial clearance event.`}
-                    eyebrow={bill.billNumber}
-                    title={`Clear ${bill.patient.name} for ${isProcedure ? 'Nursing preparation' : 'Reception'}`}
+                    description="Confirm the Doctor's procedure handoff. The selected service name and current catalog price will be preserved on the Bill."
+                    eyebrow={handoff.handoffNumber}
+                    title={`Create procedure Bill for ${handoff.patient.name}`}
                 />
 
                 <Panel className="p-5 sm:p-8">
@@ -52,9 +45,9 @@ export default function CreateFinancialClearance({
                                 Patient
                             </dt>
                             <dd className="mt-2 text-sm font-medium text-text">
-                                {bill.patient.name}
+                                {handoff.patient.name}
                                 <span className="mt-1 block font-normal text-text-secondary tabular-nums">
-                                    {bill.patient.patientNumber}
+                                    {handoff.patient.patientNumber}
                                 </span>
                             </dd>
                         </div>
@@ -63,67 +56,48 @@ export default function CreateFinancialClearance({
                                 Visit
                             </dt>
                             <dd className="mt-2 text-sm font-medium text-text tabular-nums">
-                                {bill.visit.visitNumber}
+                                {handoff.visit.visitNumber}
                                 <span className="mt-1 block font-normal text-text-secondary">
-                                    {formatDateTime(bill.visit.occurredAt)}
+                                    {formatDateTime(handoff.visit.occurredAt)}
                                 </span>
                             </dd>
                         </div>
                         <div>
                             <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
-                                Bill
-                            </dt>
-                            <dd className="mt-2 text-sm font-medium text-text tabular-nums">
-                                {bill.billNumber}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
-                                Payment
-                            </dt>
-                            <dd className="mt-2 text-sm font-medium text-text tabular-nums">
-                                {bill.payment.paymentNumber}
-                                <span className="mt-1 block font-normal text-text-secondary">
-                                    {formatDateTime(bill.payment.recordedAt)}
-                                </span>
-                            </dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
-                                Paid amount
-                            </dt>
-                            <dd className="mt-2 text-lg font-semibold text-text tabular-nums">
-                                {formatMinorAmount(bill.payment.amountMinor)}
-                            </dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
-                                Receipt
-                            </dt>
-                            <dd className="mt-2">
-                                <Link
-                                    className={textLinkStyles}
-                                    href={receiptShow(bill.payment.receipt.id)}
-                                >
-                                    {bill.payment.receipt.receiptNumber}
-                                </Link>
-                            </dd>
-                        </div>
-                        <div>
-                            <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
-                                Financial gate
+                                Procedure
                             </dt>
                             <dd className="mt-2 text-sm font-medium text-text">
-                                {bill.billType.label}
+                                {handoff.procedure.name}
                             </dd>
                         </div>
                         <div>
                             <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
-                                Financial state
+                                Catalog price
+                            </dt>
+                            <dd className="mt-2 text-lg font-semibold text-text tabular-nums">
+                                {formatMinorAmount(
+                                    handoff.procedure.amountMinor,
+                                )}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                Doctor decision
+                            </dt>
+                            <dd className="mt-2 text-sm text-text">
+                                {handoff.decidedBy}
+                                <span className="mt-1 block text-text-secondary tabular-nums">
+                                    {handoff.decisionNumber}
+                                </span>
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                Current state
                             </dt>
                             <dd className="mt-2">
                                 <StatusBadge tone="warning">
-                                    Awaiting financial clearance
+                                    {handoff.visit.nextStep}
                                 </StatusBadge>
                             </dd>
                         </div>
@@ -131,39 +105,37 @@ export default function CreateFinancialClearance({
                 </Panel>
 
                 <Panel className="p-5 sm:p-8">
-                    <Form action={store(bill.id)}>
+                    <Form action={store(handoff.id)}>
                         {({ errors, processing }) => (
                             <div className="grid gap-6">
-                                {errors.bill || errors.visit ? (
+                                {errors.procedure_billing_handoff ||
+                                errors.visit ? (
                                     <p
                                         className="rounded-control border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
                                         role="alert"
                                     >
-                                        {errors.bill ?? errors.visit}
+                                        {errors.procedure_billing_handoff ??
+                                            errors.visit}
                                     </p>
                                 ) : null}
 
-                                <div className="rounded-control border border-info-border bg-info-soft px-4 py-3 text-sm leading-6 text-info">
-                                    Granting clearance creates an immutable
-                                    financial record. The Visit state does not
-                                    change, and the next handoff becomes{' '}
-                                    {isProcedure
-                                        ? '“Ready for Nursing preparation”'
-                                        : '“Awaiting Reception check-in”'}
-                                    .
-                                </div>
+                                <p className="rounded-control border border-info-border bg-info-soft px-4 py-3 text-sm leading-6 text-info">
+                                    This creates the second financial gate only.
+                                    Payment, receipt, and procedure financial
+                                    clearance remain separate auditable actions.
+                                </p>
 
                                 <div className="flex flex-wrap justify-end gap-3 border-t border-border pt-6">
                                     <Link
                                         className={textLinkStyles}
-                                        href={billShow(bill.id)}
+                                        href={index()}
                                     >
                                         Cancel
                                     </Link>
                                     <Button disabled={processing} type="submit">
                                         {processing
-                                            ? 'Granting…'
-                                            : 'Grant Financial Clearance'}
+                                            ? 'Creating…'
+                                            : 'Create Procedure Bill'}
                                     </Button>
                                 </div>
                             </div>
@@ -175,4 +147,4 @@ export default function CreateFinancialClearance({
     );
 }
 
-CreateFinancialClearance.layout = [AuthenticatedLayout];
+CreateProcedureBill.layout = [AuthenticatedLayout];

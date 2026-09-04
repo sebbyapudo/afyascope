@@ -26,18 +26,18 @@ export default function PaymentIndex({ bills }: PaymentIndexProps) {
 
     return (
         <>
-            <Head title="Consultation payments" />
+            <Head title="Payments" />
             <PageContainer width="wide">
                 <PageHeader
-                    description="Record exact payment for open consultation Bills and issue the corresponding receipt. Financial clearance remains a separate next step."
-                    title="Consultation payments"
+                    description="Record exact payment for open consultation or procedure Bills and issue the corresponding receipt. Each financial clearance remains a separate next step."
+                    title="Payments"
                 />
 
                 <Panel className="overflow-hidden">
                     {data.length === 0 ? (
                         <EmptyState
                             description="Bills leave this queue after payment and receipt creation complete successfully."
-                            title="No consultation Bills awaiting payment"
+                            title="No Bills awaiting payment"
                         />
                     ) : (
                         <div className="overflow-x-auto">
@@ -52,6 +52,9 @@ export default function PaymentIndex({ bills }: PaymentIndexProps) {
                                         </th>
                                         <th className="px-5 py-4" scope="col">
                                             Visit
+                                        </th>
+                                        <th className="px-5 py-4" scope="col">
+                                            Gate
                                         </th>
                                         <th className="px-5 py-4" scope="col">
                                             Amount
@@ -94,6 +97,9 @@ export default function PaymentIndex({ bills }: PaymentIndexProps) {
                                             <td className="px-5 py-4 text-text-secondary tabular-nums">
                                                 {bill.visit.visitNumber}
                                             </td>
+                                            <td className="px-5 py-4 text-text-secondary">
+                                                {bill.type.label}
+                                            </td>
                                             <td className="px-5 py-4 font-semibold text-text tabular-nums">
                                                 {formatMinorAmount(
                                                     bill.totalAmountMinor,
@@ -126,7 +132,7 @@ export default function PaymentIndex({ bills }: PaymentIndexProps) {
                                 {pagination.total}
                             </p>
                             <nav
-                                aria-label="Consultation payment queue pagination"
+                                aria-label="Payment queue pagination"
                                 className="flex items-center gap-2"
                             >
                                 {pagination.currentPage > 1 ? (

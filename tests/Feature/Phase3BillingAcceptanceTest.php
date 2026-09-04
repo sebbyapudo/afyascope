@@ -501,8 +501,8 @@ it('keeps procedure billing dependent on one authoritative Doctor handoff', func
     expect($procedureBill->type)->toBe(BillType::Procedure)
         ->and($procedureBill->procedure_billing_handoff_id)->toBe($authoritativeHandoff->id)
         ->and(ProcedureBillingHandoff::query()->awaitingBill()->count())->toBe(0)
-        ->and(Route::has('billing.procedures.index'))->toBeFalse()
-        ->and(Route::has('billing.procedures.store'))->toBeFalse()
+        ->and(Route::has('billing.procedures.index'))->toBeTrue()
+        ->and(Route::has('billing.procedures.store'))->toBeTrue()
         ->and(Route::has('consultations.store'))->toBeFalse()
         ->and(Route::has('billing.procedure-payments.store'))->toBeFalse()
         ->and(Route::has('billing.procedure-clearances.store'))->toBeFalse();

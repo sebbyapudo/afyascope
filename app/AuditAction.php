@@ -19,6 +19,7 @@ enum AuditAction: string
     case PaymentRecorded = 'payment.recorded';
     case ReceiptIssued = 'receipt.issued';
     case ConsultationFinancialCleared = 'consultation.financial_cleared';
+    case ProcedureFinancialCleared = 'procedure.financial_cleared';
     case VisitCheckedIn = 'visit.checked_in';
     case ConsultationStarted = 'consultation.started';
     case ConsultationAssessmentUpdated = 'consultation.assessment_updated';
@@ -42,6 +43,7 @@ enum AuditAction: string
             self::PaymentRecorded => 'Payment recorded',
             self::ReceiptIssued => 'Receipt issued',
             self::ConsultationFinancialCleared => 'Consultation financially cleared',
+            self::ProcedureFinancialCleared => 'Procedure financially cleared',
             self::VisitCheckedIn => 'Visit checked in',
             self::ConsultationStarted => 'Consultation started',
             self::ConsultationAssessmentUpdated => 'Consultation assessment updated',

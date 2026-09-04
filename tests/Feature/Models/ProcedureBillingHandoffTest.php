@@ -111,7 +111,7 @@ it('adds only the structural foundation without procedure or clinical routes', f
         ->and(Schema::hasTable('procedure_decisions'))->toBeTrue()
         ->and(Schema::hasColumn('procedure_billing_handoffs', 'procedure_decision_id'))->toBeTrue()
         ->and(Schema::hasColumn('bills', 'procedure_billing_handoff_id'))->toBeTrue()
-        ->and(Route::has('billing.procedures.index'))->toBeFalse()
-        ->and(Route::has('billing.procedures.store'))->toBeFalse()
+        ->and(Route::has('billing.procedures.index'))->toBeTrue()
+        ->and(Route::has('billing.procedures.store'))->toBeTrue()
         ->and(Route::has('consultations.store'))->toBeFalse();
 });

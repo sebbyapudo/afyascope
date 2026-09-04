@@ -10,8 +10,9 @@ import {
     create as clearanceCreate,
     show as clearanceShow,
 } from '@/routes/billing/clearances';
-import { index } from '@/routes/billing/consultations';
+import { index as consultationBillingIndex } from '@/routes/billing/consultations';
 import { create as paymentCreate } from '@/routes/billing/payments';
+import { index as procedureBillingIndex } from '@/routes/billing/procedures';
 import { show as receiptShow } from '@/routes/billing/receipts';
 import type { ConsultationBill } from '@/types';
 
@@ -29,6 +30,7 @@ function formatDateTime(date: string): string {
 
 export default function ShowBill({ bill, status }: ShowBillProps) {
     const { props } = usePage();
+    const isProcedure = bill.type.value === 'procedure';
     const canRecordPayment =
         props.auth.capabilities.createPayments && bill.payment === null;
     const canGrantClearance =
@@ -67,11 +69,19 @@ export default function ShowBill({ bill, status }: ShowBillProps) {
                         ) : null
                     }
                     backLink={
-                        <Link className={textLinkStyles} href={index()}>
-                            Back to consultation billing queue
+                        <Link
+                            className={textLinkStyles}
+                            href={
+                                isProcedure
+                                    ? procedureBillingIndex()
+                                    : consultationBillingIndex()
+                            }
+                        >
+                            Back to {bill.type.label.toLowerCase()} billing
+                            queue
                         </Link>
                     }
-                    description="Consultation charge record"
+                    description={`${bill.type.label} charge record`}
                     eyebrow={bill.billNumber}
                     title={bill.patient.name}
                 />
@@ -205,7 +215,8 @@ export default function ShowBill({ bill, status }: ShowBillProps) {
                                     Payment
                                 </h2>
                                 <p className="mt-1 text-sm text-text-secondary">
-                                    Exact consultation Bill payment recorded.
+                                    Exact {bill.type.label.toLowerCase()} Bill
+                                    payment recorded.
                                 </p>
                             </div>
                             {bill.payment.receipt ? (
@@ -254,7 +265,7 @@ export default function ShowBill({ bill, status }: ShowBillProps) {
                         <div className="flex flex-wrap items-center justify-between gap-4">
                             <div>
                                 <h2 className="font-semibold text-success">
-                                    Consultation financially cleared
+                                    {bill.type.label} financially cleared
                                 </h2>
                                 <p className="mt-1 text-sm text-success">
                                     {bill.financialClearance.clearanceNumber}{' '}
@@ -283,8 +294,8 @@ export default function ShowBill({ bill, status }: ShowBillProps) {
                 <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6">
                     <h2 className="font-semibold text-info">Next handoff</h2>
                     <p className="mt-1 text-sm leading-6 text-info">
-                        {bill.visit.nextStep}. Financial clearance and check-in
-                        remain separate auditable actions.
+                        {bill.visit.nextStep}. The two financial gates remain
+                        separate auditable workflows.
                     </p>
                 </Panel>
             </PageContainer>

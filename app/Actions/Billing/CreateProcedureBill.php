@@ -8,6 +8,7 @@ use App\BillType;
 use App\Models\Bill;
 use App\Models\BillItem;
 use App\Models\ProcedureBillingHandoff;
+use App\Models\ProcedureDecision;
 use App\Models\ServiceCatalogItem;
 use App\Models\User;
 use App\Models\Visit;
@@ -36,6 +37,17 @@ class CreateProcedureBill
                 ]);
             }
 
+            $lockedDecision = ProcedureDecision::query()
+                ->lockForUpdate()
+                ->find($lockedHandoff->procedure_decision_id);
+
+            if (! $lockedDecision instanceof ProcedureDecision
+                || ! $lockedHandoff->matchesAuthoritativeDecision($lockedDecision)) {
+                throw ValidationException::withMessages([
+                    'procedure_billing_handoff' => 'The procedure billing handoff does not match its authoritative Doctor decision.',
+                ]);
+            }
+
             $lockedVisit = Visit::query()
                 ->lockForUpdate()
                 ->find($lockedHandoff->visit_id);
@@ -56,7 +68,7 @@ class CreateProcedureBill
 
             $lockedService = ServiceCatalogItem::query()
                 ->lockForUpdate()
-                ->find($lockedHandoff->service_catalog_item_id);
+                ->find($lockedDecision->service_catalog_item_id);
 
             if (! $lockedService instanceof ServiceCatalogItem
                 || ! $lockedService->is_active

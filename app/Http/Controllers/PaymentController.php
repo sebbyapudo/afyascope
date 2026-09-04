@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Billing\RecordConsultationPayment;
+use App\Actions\Billing\RecordProcedurePayment;
 use App\BillStatus;
 use App\BillType;
 use App\Http\Requests\StoreConsultationPaymentRequest;
@@ -10,10 +11,14 @@ use App\Models\Bill;
 use App\Models\BillItem;
 use App\Models\Patient;
 use App\Models\Payment;
+use App\Models\ProcedureBillingHandoff;
+use App\Models\ProcedureDecision;
 use App\Models\Receipt;
 use App\Models\User;
 use App\Models\Visit;
 use App\PaymentMethod;
+use App\ProcedureDecisionOutcome;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Inertia\Inertia;
 use Inertia\Response;
@@ -23,8 +28,18 @@ class PaymentController extends Controller
     public function index(): Response
     {
         $bills = Bill::query()
-            ->select(['id', 'visit_id', 'bill_number', 'type', 'status', 'created_at'])
-            ->where('type', BillType::Consultation->value)
+            ->select(['id', 'visit_id', 'procedure_billing_handoff_id', 'bill_number', 'type', 'status', 'created_at'])
+            ->where(function (Builder $query): void {
+                $query
+                    ->where('type', BillType::Consultation->value)
+                    ->orWhere(function (Builder $procedureQuery): void {
+                        $procedureQuery
+                            ->where('type', BillType::Procedure->value)
+                            ->whereHas('procedureBillingHandoff.procedureDecision', function (Builder $decisionQuery): void {
+                                $decisionQuery->where('outcome', ProcedureDecisionOutcome::ProcedureRequired->value);
+                            });
+                    });
+            })
             ->where('status', BillStatus::Open->value)
             ->whereDoesntHave('payment')
             ->with([
@@ -54,7 +69,11 @@ class PaymentController extends Controller
 
     public function create(Bill $bill): Response|RedirectResponse
     {
-        abort_unless($bill->type === BillType::Consultation, 404);
+        abort_unless(in_array($bill->type, [BillType::Consultation, BillType::Procedure], true), 404);
+
+        if ($bill->type === BillType::Procedure) {
+            abort_unless($this->hasValidProcedureFoundation($bill), 404);
+        }
 
         $existingPayment = $bill->payment()->with('receipt')->first();
 
@@ -89,6 +108,7 @@ class PaymentController extends Controller
         StoreConsultationPaymentRequest $request,
         Bill $bill,
         RecordConsultationPayment $recordConsultationPayment,
+        RecordProcedurePayment $recordProcedurePayment,
     ): RedirectResponse {
         $actor = $request->user();
 
@@ -96,11 +116,18 @@ class PaymentController extends Controller
             abort(403);
         }
 
-        $receipt = $recordConsultationPayment->handle(
-            $actor,
-            $bill,
-            $request->paymentMethod(),
-        );
+        $receipt = match ($bill->type) {
+            BillType::Consultation => $recordConsultationPayment->handle(
+                $actor,
+                $bill,
+                $request->paymentMethod(),
+            ),
+            BillType::Procedure => $recordProcedurePayment->handle(
+                $actor,
+                $bill,
+                $request->paymentMethod(),
+            ),
+        };
 
         return redirect()->route('billing.receipts.show', $receipt)->with(
             'status',
@@ -109,7 +136,7 @@ class PaymentController extends Controller
     }
 
     /**
-     * @return array{id: int, billNumber: string, status: array{value: string, label: string}, totalAmountMinor: int, createdAt: string|null, items?: list<array{id: int, description: string, amountMinor: int}>, visit: array{visitNumber: string, occurredAt: string}, patient: array{patientNumber: string, name: string}}
+     * @return array{id: int, billNumber: string, type: array{value: string, label: string}, status: array{value: string, label: string}, totalAmountMinor: int, createdAt: string|null, items?: list<array{id: int, description: string, amountMinor: int}>, visit: array{visitNumber: string, occurredAt: string}, patient: array{patientNumber: string, name: string}}
      */
     private function billData(Bill $bill, bool $includeItems = false): array
     {
@@ -121,6 +148,10 @@ class PaymentController extends Controller
         $data = [
             'id' => $bill->id,
             'billNumber' => $bill->bill_number,
+            'type' => [
+                'value' => $bill->type->value,
+                'label' => $bill->type->displayName(),
+            ],
             'status' => [
                 'value' => $bill->status->value,
                 'label' => $bill->status->displayName(),
@@ -159,5 +190,19 @@ class PaymentController extends Controller
             $patient->middle_name,
             $patient->last_name,
         ])->filter()->implode(' ');
+    }
+
+    private function hasValidProcedureFoundation(Bill $bill): bool
+    {
+        $bill->loadMissing('procedureBillingHandoff.procedureDecision');
+        $handoff = $bill->procedureBillingHandoff;
+        $decision = $handoff instanceof ProcedureBillingHandoff
+            ? $handoff->procedureDecision
+            : null;
+
+        return $handoff instanceof ProcedureBillingHandoff
+            && $decision instanceof ProcedureDecision
+            && $handoff->visit_id === $bill->visit_id
+            && $handoff->matchesAuthoritativeDecision($decision);
     }
 }

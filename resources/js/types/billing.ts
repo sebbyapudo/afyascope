@@ -31,6 +31,33 @@ export type ConsultationBillingQueue = {
     };
 };
 
+export type ProcedureBillingHandoff = {
+    id: number;
+    handoffNumber: string;
+    decidedAt: string;
+    decisionNumber: string;
+    decidedBy: string;
+    procedure: {
+        name: string;
+        amountMinor: number;
+    };
+    visit: {
+        visitNumber: string;
+        occurredAt: string;
+        status: BillingLabel;
+        nextStep: string;
+    };
+    patient: {
+        patientNumber: string;
+        name: string;
+    };
+};
+
+export type ProcedureBillingQueue = {
+    data: ProcedureBillingHandoff[];
+    pagination: ConsultationBillingQueue['pagination'];
+};
+
 export type ConsultationBill = {
     id: number;
     billNumber: string;
@@ -73,6 +100,7 @@ export type ConsultationBill = {
 export type PaymentQueueBill = {
     id: number;
     billNumber: string;
+    type: BillingLabel;
     status: BillingLabel;
     totalAmountMinor: number;
     createdAt: string | null;
@@ -134,6 +162,7 @@ export type ReceiptDetail = {
 export type FinancialClearanceQueueBill = {
     id: number;
     billNumber: string;
+    billType: BillingLabel;
     billStatus: BillingLabel;
     totalAmountMinor: number;
     createdAt: string | null;
@@ -170,6 +199,7 @@ export type FinancialClearanceDetail = {
     bill: {
         id: number;
         billNumber: string;
+        type: BillingLabel;
         status: BillingLabel;
         totalAmountMinor: number;
     };

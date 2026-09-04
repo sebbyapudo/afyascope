@@ -65,9 +65,9 @@ class Payment extends Model
             $bill = Bill::query()->with('items:id,bill_id,amount_minor')->find($payment->bill_id);
 
             if (! $bill instanceof Bill
-                || $bill->type !== BillType::Consultation
+                || ! in_array($bill->type, [BillType::Consultation, BillType::Procedure], true)
                 || $bill->status !== BillStatus::Open) {
-                throw new LogicException('Payments require an open consultation Bill.');
+                throw new LogicException('Payments require an open Bill from a supported financial gate.');
             }
 
             $amountMinor = $bill->totalAmountMinor();

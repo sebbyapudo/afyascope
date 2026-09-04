@@ -71,6 +71,14 @@ export default function CreatePayment({
                         </div>
                         <div>
                             <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                Financial gate
+                            </dt>
+                            <dd className="mt-2 text-sm font-medium text-text">
+                                {bill.type.label}
+                            </dd>
+                        </div>
+                        <div>
+                            <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
                                 Bill status
                             </dt>
                             <dd className="mt-2">

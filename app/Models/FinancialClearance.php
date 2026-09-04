@@ -58,13 +58,13 @@ class FinancialClearance extends Model
                 ->find($financialClearance->bill_id);
 
             if (! $bill instanceof Bill
-                || $bill->type !== BillType::Consultation
+                || ! in_array($bill->type, [BillType::Consultation, BillType::Procedure], true)
                 || $bill->status !== BillStatus::Paid
                 || ! $bill->payment instanceof Payment
                 || ! $bill->payment->receipt instanceof Receipt
                 || $bill->payment->amount_minor !== $bill->totalAmountMinor()
                 || $bill->payment->amount_minor <= 0) {
-                throw new LogicException('Financial clearance requires a fully paid consultation Bill with a Receipt.');
+                throw new LogicException('Financial clearance requires a fully paid Bill with a Receipt.');
             }
 
             if (! User::query()->whereKey($financialClearance->granted_by_user_id)->exists()) {
