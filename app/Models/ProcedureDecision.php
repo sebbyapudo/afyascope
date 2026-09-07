@@ -34,6 +34,7 @@ use LogicException;
  * @property-read User $doctor
  * @property-read ServiceCatalogItem|null $serviceCatalogItem
  * @property-read ProcedureBillingHandoff|null $procedureBillingHandoff
+ * @property-read PreProcedureReadiness|null $preProcedureReadiness
  */
 #[Fillable(['clinical_rationale'])]
 class ProcedureDecision extends Model
@@ -71,6 +72,12 @@ class ProcedureDecision extends Model
     public function procedureBillingHandoff(): HasOne
     {
         return $this->hasOne(ProcedureBillingHandoff::class);
+    }
+
+    /** @return HasOne<PreProcedureReadiness, $this> */
+    public function preProcedureReadiness(): HasOne
+    {
+        return $this->hasOne(PreProcedureReadiness::class);
     }
 
     public static function recordFromAuthoritativeDoctorWorkflow(

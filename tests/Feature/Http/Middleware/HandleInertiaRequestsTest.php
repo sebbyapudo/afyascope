@@ -43,6 +43,7 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'createCheckIns' => false,
                 'viewConsultations' => false,
                 'manageConsultations' => false,
+                'manageNursing' => false,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -80,6 +81,7 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'createCheckIns' => false,
                 'viewConsultations' => false,
                 'manageConsultations' => false,
+                'manageNursing' => false,
             ])
         );
 });
@@ -110,6 +112,7 @@ test('Receptionist Inertia responses expose only the Patient capabilities grante
             ->where('auth.capabilities.createCheckIns', true)
             ->where('auth.capabilities.viewConsultations', false)
             ->where('auth.capabilities.manageConsultations', false)
+            ->where('auth.capabilities.manageNursing', false)
         );
 });
 
@@ -134,6 +137,7 @@ test('Accountant Inertia responses expose only the billing capabilities granted 
             ->where('auth.capabilities.viewAudit', false)
             ->where('auth.capabilities.viewConsultations', false)
             ->where('auth.capabilities.manageConsultations', false)
+            ->where('auth.capabilities.manageNursing', false)
         );
 });
 
@@ -158,5 +162,26 @@ test('Doctor Inertia responses expose only the consultation capabilities granted
             ->where('auth.capabilities.createClearance', false)
             ->where('auth.capabilities.viewUsers', false)
             ->where('auth.capabilities.viewAudit', false)
+            ->where('auth.capabilities.manageNursing', false)
+        );
+});
+
+test('Nurse Inertia responses expose only the Nursing preparation capability', function () {
+    $nurse = User::factory()->forRole(StaffRole::Nurse)->create();
+
+    $this->actingAs($nurse)
+        ->get(route('dashboard'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('auth.capabilities.manageNursing', true)
+            ->where('auth.capabilities.viewConsultations', false)
+            ->where('auth.capabilities.manageConsultations', false)
+            ->where('auth.capabilities.viewBilling', false)
+            ->where('auth.capabilities.createBilling', false)
+            ->where('auth.capabilities.viewPayments', false)
+            ->where('auth.capabilities.createPayments', false)
+            ->where('auth.capabilities.viewClearance', false)
+            ->where('auth.capabilities.createClearance', false)
+            ->where('auth.capabilities.viewCheckIns', false)
+            ->where('auth.capabilities.createCheckIns', false)
         );
 });

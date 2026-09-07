@@ -9,6 +9,7 @@ import { index as paymentIndex } from '@/routes/billing/payments';
 import { index as procedureBillingIndex } from '@/routes/billing/procedures';
 import { index as checkInIndex } from '@/routes/check-ins';
 import { index as clinicalConsultationIndex } from '@/routes/clinical/consultations';
+import { index as procedurePreparationIndex } from '@/routes/nursing/pre-procedure-readiness';
 import { index as patientIndex } from '@/routes/patients';
 import { index as staffIndex } from '@/routes/staff';
 import { index as visitIndex } from '@/routes/visits';
@@ -94,6 +95,16 @@ export function navigationItems(
             href: consultationBillingIndex(),
             label: 'Consultation Billing',
             visible: capabilities.viewBilling,
+        },
+        {
+            active: isCurrentPath(
+                currentUrl,
+                procedurePreparationIndex.url(),
+                true,
+            ),
+            href: procedurePreparationIndex(),
+            label: 'Procedure Preparation',
+            visible: capabilities.manageNursing,
         },
         {
             active: isCurrentPath(

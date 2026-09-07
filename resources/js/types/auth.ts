@@ -33,6 +33,7 @@ export type Capabilities = {
     createCheckIns: boolean;
     viewConsultations: boolean;
     manageConsultations: boolean;
+    manageNursing: boolean;
 };
 
 export type Auth = {

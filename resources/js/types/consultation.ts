@@ -67,6 +67,17 @@ export type ClinicalProcedureDecision = {
     handoff: {
         handoffNumber: string;
     } | null;
+    readiness: {
+        readinessNumber: string;
+        status: {
+            value: 'in_preparation' | 'ready';
+            label: string;
+        };
+        nurse: {
+            name: string;
+        };
+        completedAt: string | null;
+    } | null;
 };
 
 export type ProcedureServiceOption = {

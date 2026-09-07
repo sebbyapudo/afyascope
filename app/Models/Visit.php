@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\BillType;
 use App\ConsultationStatus;
+use App\PreProcedureReadinessStatus;
 use App\ProcedureDecisionOutcome;
 use App\VisitStatus;
 use Carbon\CarbonImmutable;
@@ -36,6 +37,7 @@ use LogicException;
  * @property-read Consultation|null $consultation
  * @property-read ProcedureBillingHandoff|null $procedureBillingHandoff
  * @property-read ProcedureDecision|null $procedureDecision
+ * @property-read PreProcedureReadiness|null $preProcedureReadiness
  * @property-read Patient $patient
  * @property-read VisitCheckIn|null $checkIn
  */
@@ -112,6 +114,12 @@ class Visit extends Model
     public function procedureDecision(): HasOne
     {
         return $this->hasOne(ProcedureDecision::class);
+    }
+
+    /** @return HasOne<PreProcedureReadiness, $this> */
+    public function preProcedureReadiness(): HasOne
+    {
+        return $this->hasOne(PreProcedureReadiness::class);
     }
 
     /**
@@ -221,9 +229,19 @@ class Visit extends Model
                         ? $procedureBill->financialClearance instanceof FinancialClearance
                         : $procedureBill->financialClearance()->exists();
 
-                    return $hasFinancialClearance
-                        ? 'Ready for Nursing preparation'
-                        : 'Awaiting procedure financial clearance';
+                    if (! $hasFinancialClearance) {
+                        return 'Awaiting procedure financial clearance';
+                    }
+
+                    $readiness = $this->relationLoaded('preProcedureReadiness')
+                        ? $this->preProcedureReadiness
+                        : $this->preProcedureReadiness()->first();
+
+                    return match ($readiness?->status) {
+                        PreProcedureReadinessStatus::InPreparation => 'Nursing preparation in progress',
+                        PreProcedureReadinessStatus::Ready => 'Ready for Doctor procedure',
+                        default => 'Ready for Nursing preparation',
+                    };
                 }
 
                 return $procedureDecision?->outcome === ProcedureDecisionOutcome::NoProcedure

@@ -121,3 +121,16 @@ test('only Receptionist receives the check-in gates', function (StaffRole $role,
     'Administrator' => [StaffRole::Administrator, false],
     'Management' => [StaffRole::Management, false],
 ]);
+
+test('only Nurse receives the pre-procedure readiness gate', function (StaffRole $role, bool $allowed) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->allows(StaffPermission::NursingManage))->toBe($allowed);
+})->with([
+    'Receptionist' => [StaffRole::Receptionist, false],
+    'Accountant' => [StaffRole::Accountant, false],
+    'Doctor' => [StaffRole::Doctor, false],
+    'Nurse' => [StaffRole::Nurse, true],
+    'Administrator' => [StaffRole::Administrator, false],
+    'Management' => [StaffRole::Management, false],
+]);

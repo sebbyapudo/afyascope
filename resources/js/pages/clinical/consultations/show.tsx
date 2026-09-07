@@ -408,6 +408,54 @@ export default function ConsultationShow({
                                             ?.handoffNumber ?? 'Not created'}
                                     </dd>
                                 </div>
+                                <div>
+                                    <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        Nurse readiness
+                                    </dt>
+                                    <dd className="mt-2 text-sm text-text">
+                                        {consultation.procedureDecision
+                                            .readiness ? (
+                                            <>
+                                                <StatusBadge
+                                                    tone={
+                                                        consultation
+                                                            .procedureDecision
+                                                            .readiness.status
+                                                            .value === 'ready'
+                                                            ? 'success'
+                                                            : 'info'
+                                                    }
+                                                >
+                                                    {
+                                                        consultation
+                                                            .procedureDecision
+                                                            .readiness.status
+                                                            .label
+                                                    }
+                                                </StatusBadge>
+                                                <span className="mt-2 block text-text-secondary">
+                                                    Nurse{' '}
+                                                    {
+                                                        consultation
+                                                            .procedureDecision
+                                                            .readiness.nurse
+                                                            .name
+                                                    }
+                                                </span>
+                                                <span className="mt-1 block text-xs text-text-secondary tabular-nums">
+                                                    {
+                                                        consultation
+                                                            .procedureDecision
+                                                            .readiness
+                                                            .readinessNumber
+                                                    }
+                                                </span>
+                                            </>
+                                        ) : (
+                                            'Not started'
+                                        )}
+                                    </dd>
+                                </div>
                                 <div className="sm:col-span-2">
                                     <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
                                         Clinical rationale

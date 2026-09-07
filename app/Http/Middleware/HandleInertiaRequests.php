@@ -89,6 +89,7 @@ class HandleInertiaRequests extends Middleware
                     'createCheckIns' => $user?->can('create', VisitCheckIn::class) ?? false,
                     'viewConsultations' => $user?->can('viewAny', Consultation::class) ?? false,
                     'manageConsultations' => $user?->can('create', Consultation::class) ?? false,
+                    'manageNursing' => $user?->can(StaffPermission::NursingManage) ?? false,
                 ],
             ],
         ];

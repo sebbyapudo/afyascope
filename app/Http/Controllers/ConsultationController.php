@@ -11,6 +11,7 @@ use App\Http\Requests\StoreConsultationRequest;
 use App\Http\Requests\UpdateConsultationAssessmentRequest;
 use App\Models\Consultation;
 use App\Models\Patient;
+use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureBillingHandoff;
 use App\Models\ProcedureDecision;
 use App\Models\ServiceCatalogItem;
@@ -140,6 +141,8 @@ class ConsultationController extends Controller
             'doctor:id,name',
             'procedureDecision:id,consultation_id,visit_id,doctor_user_id,service_catalog_item_id,decision_number,outcome,clinical_rationale,decided_at',
             'procedureDecision.procedureBillingHandoff:id,procedure_decision_id,handoff_number',
+            'procedureDecision.preProcedureReadiness:id,procedure_decision_id,nurse_user_id,readiness_number,status,started_at,completed_at',
+            'procedureDecision.preProcedureReadiness.nurse:id,name',
             'procedureDecision.serviceCatalogItem:id,name',
             'visit:id,patient_id,visit_number,occurred_at,status',
             'visit.patient:id,patient_number,first_name,middle_name,last_name',
@@ -260,7 +263,7 @@ class ConsultationController extends Controller
     }
 
     /**
-     * @return array{id: int, consultationNumber: string, status: array{value: string, label: string}, startedAt: string, canManage: bool, canRecordProcedureDecision: bool, doctor: array{id: int, name: string}, visit: array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string, checkIn: array{checkInNumber: string, checkedInAt: string}, patient: array{patientNumber: string, name: string}}, assessment: array{presentingComplaint: string|null, relevantHistory: string|null, currentMedications: string|null, allergies: string|null, examinationFindings: string|null, asaClassification: string|null, assessmentImpression: string|null, planNotes: string|null}, procedureDecision: array{decisionNumber: string, outcome: array{value: string, label: string}, clinicalRationale: string|null, decidedAt: string, service: array{id: int, name: string}|null, handoff: array{handoffNumber: string}|null}|null}
+     * @return array<string, mixed>
      */
     private function consultationWorkspaceData(Consultation $consultation, bool $canManage): array
     {
@@ -294,6 +297,17 @@ class ConsultationController extends Controller
                 ] : null,
                 'handoff' => $procedureDecision->procedureBillingHandoff instanceof ProcedureBillingHandoff ? [
                     'handoffNumber' => $procedureDecision->procedureBillingHandoff->handoff_number,
+                ] : null,
+                'readiness' => $procedureDecision->preProcedureReadiness instanceof PreProcedureReadiness ? [
+                    'readinessNumber' => $procedureDecision->preProcedureReadiness->readiness_number,
+                    'status' => [
+                        'value' => $procedureDecision->preProcedureReadiness->status->value,
+                        'label' => $procedureDecision->preProcedureReadiness->status->displayName(),
+                    ],
+                    'nurse' => [
+                        'name' => $procedureDecision->preProcedureReadiness->nurse->name,
+                    ],
+                    'completedAt' => $procedureDecision->preProcedureReadiness->completed_at?->toIso8601String(),
                 ] : null,
             ] : null,
         ];
