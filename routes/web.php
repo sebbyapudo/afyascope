@@ -22,6 +22,7 @@ use App\Http\Controllers\ProcedureBillingController;
 use App\Http\Controllers\ProcedureDecisionController;
 use App\Http\Controllers\ProcedureRecordController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\RecoveryEpisodeController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitCheckInController;
 use App\Http\Controllers\VisitController;
@@ -34,6 +35,7 @@ use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureRecord;
+use App\Models\RecoveryEpisode;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitCheckIn;
@@ -77,6 +79,19 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/nursing/procedure-preparations/{preProcedureReadiness}/complete', CompletePreProcedureReadinessController::class)
         ->can('complete', 'preProcedureReadiness')
         ->name('nursing.pre-procedure-readiness.complete');
+
+    Route::get('/nursing/recovery', [RecoveryEpisodeController::class, 'index'])
+        ->middleware('can:recovery.manage')
+        ->name('nursing.recovery.index');
+    Route::get('/nursing/recovery/procedures/{procedureRecord}', [RecoveryEpisodeController::class, 'create'])
+        ->can('create', RecoveryEpisode::class)
+        ->name('nursing.recovery.create');
+    Route::post('/nursing/recovery/procedures/{procedureRecord}', [RecoveryEpisodeController::class, 'store'])
+        ->can('create', RecoveryEpisode::class)
+        ->name('nursing.recovery.store');
+    Route::get('/nursing/recovery/{recoveryEpisode}', [RecoveryEpisodeController::class, 'show'])
+        ->can('view', 'recoveryEpisode')
+        ->name('nursing.recovery.show');
 
     Route::get('/clinical/consultations', [ConsultationController::class, 'index'])
         ->can('viewAny', Consultation::class)

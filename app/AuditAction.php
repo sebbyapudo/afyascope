@@ -29,6 +29,7 @@ enum AuditAction: string
     case ProcedureStarted = 'procedure.started';
     case ProcedureDocumentationUpdated = 'procedure.documentation_updated';
     case ProcedureCompleted = 'procedure.completed';
+    case RecoveryStarted = 'recovery.started';
 
     public function displayName(): string
     {
@@ -58,6 +59,7 @@ enum AuditAction: string
             self::ProcedureStarted => 'Procedure started',
             self::ProcedureDocumentationUpdated => 'Procedure documentation updated',
             self::ProcedureCompleted => 'Procedure completed',
+            self::RecoveryStarted => 'Recovery started',
         };
     }
 }

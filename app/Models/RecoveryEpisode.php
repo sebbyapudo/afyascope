@@ -3,11 +3,14 @@
 namespace App\Models;
 
 use App\RecoveryEpisodeStatus;
+use App\StaffRole;
+use App\VisitStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\RecoveryEpisodeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Support\Str;
 use LogicException;
 
 /**
@@ -29,6 +32,8 @@ class RecoveryEpisode extends Model
 {
     /** @use HasFactory<RecoveryEpisodeFactory> */
     use HasFactory;
+
+    private static bool $startingFromNursingWorkflow = false;
 
     /** @var array<string, mixed> */
     protected $attributes = [
@@ -53,12 +58,55 @@ class RecoveryEpisode extends Model
         return $this->belongsTo(User::class, 'nurse_user_id');
     }
 
+    public static function startFromNursingWorkflow(
+        ProcedureRecord $procedureRecord,
+        Visit $visit,
+        User $nurse,
+    ): self {
+        if (! $procedureRecord->exists
+            || ! $procedureRecord->isReadyForNursingRecovery()
+            || ! $visit->exists
+            || $procedureRecord->visit_id !== $visit->getKey()
+            || $visit->status !== VisitStatus::CheckedIn
+            || ! $nurse->exists
+            || ! $nurse->is_active
+            || $nurse->role?->slug !== StaffRole::Nurse->value) {
+            throw new LogicException('Recovery requires a completed Procedure Record, its checked-in Visit, and an active Nurse.');
+        }
+
+        self::$startingFromNursingWorkflow = true;
+
+        try {
+            $recoveryEpisode = new self;
+            $recoveryEpisode->visit()->associate($visit);
+            $recoveryEpisode->procedureRecord()->associate($procedureRecord);
+            $recoveryEpisode->nurse()->associate($nurse);
+            $recoveryEpisode->save();
+
+            return $recoveryEpisode;
+        } finally {
+            self::$startingFromNursingWorkflow = false;
+        }
+    }
+
     protected static function booted(): void
     {
-        static::creating(function (): void {
-            throw new LogicException(
-                'Recovery episodes may only begin through the future authoritative Nursing workflow.',
-            );
+        static::creating(function (RecoveryEpisode $recoveryEpisode): void {
+            if (! self::$startingFromNursingWorkflow) {
+                throw new LogicException(
+                    'Recovery episodes may only begin through the authoritative Nursing workflow.',
+                );
+            }
+
+            $recoveryEpisode->recovery_number = 'TMP-'.Str::ulid();
+            $recoveryEpisode->status = RecoveryEpisodeStatus::InProgress;
+            $recoveryEpisode->started_at = now();
+            $recoveryEpisode->completed_at = null;
+        });
+
+        static::created(function (RecoveryEpisode $recoveryEpisode): void {
+            $recoveryEpisode->recovery_number = sprintf('REC-%06d', $recoveryEpisode->id);
+            $recoveryEpisode->saveQuietly();
         });
 
         static::updating(function (): void {

@@ -8,6 +8,7 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { cn } from '@/lib/utils';
 import { complete, index, update } from '@/routes/clinical/procedures';
+import { show as recoveryShow } from '@/routes/nursing/recovery';
 import type { ProcedureRecordWorkspace } from '@/types';
 
 type ProcedureShowProps = {
@@ -473,6 +474,30 @@ export default function ProcedureShow({
                                 </div>
                             )}
                         </Form>
+                    </Panel>
+                ) : isCompleted && procedure.recovery ? (
+                    <Panel className="border-info-border bg-info-soft p-5 sm:p-8">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div>
+                                <h2 className="text-lg font-semibold text-info">
+                                    Recovery in progress
+                                </h2>
+                                <p className="mt-2 text-sm text-text-secondary">
+                                    {procedure.recovery.recoveryNumber} was
+                                    started{' '}
+                                    {formatDateTime(
+                                        procedure.recovery.startedAt,
+                                    )}{' '}
+                                    by {procedure.recovery.nurse.name}.
+                                </p>
+                            </div>
+                            <Link
+                                className={textLinkStyles}
+                                href={recoveryShow(procedure.recovery.id)}
+                            >
+                                View recovery
+                            </Link>
+                        </div>
                     </Panel>
                 ) : isCompleted ? (
                     <Panel className="border-success-border bg-success-soft p-5 sm:p-8">

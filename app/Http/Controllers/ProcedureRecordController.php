@@ -176,6 +176,8 @@ class ProcedureRecordController extends Controller
             'visit:id,patient_id,visit_number,occurred_at,status',
             'visit.patient:id,patient_number,first_name,middle_name,last_name,date_of_birth,sex',
             'visit.procedureRecord:id,visit_id,status',
+            'recoveryEpisode:id,procedure_record_id,nurse_user_id,recovery_number,status,started_at,completed_at',
+            'recoveryEpisode.nurse:id,name',
         ];
     }
 
@@ -317,6 +319,16 @@ class ProcedureRecordController extends Controller
                 'outcome' => $procedureRecord->outcome,
                 'procedureNotes' => $procedureRecord->procedure_notes,
             ],
+            'recovery' => $procedureRecord->recoveryEpisode ? [
+                'id' => $procedureRecord->recoveryEpisode->id,
+                'recoveryNumber' => $procedureRecord->recoveryEpisode->recovery_number,
+                'status' => [
+                    'value' => $procedureRecord->recoveryEpisode->status->value,
+                    'label' => $procedureRecord->recoveryEpisode->status->displayName(),
+                ],
+                'startedAt' => $procedureRecord->recoveryEpisode->started_at->toIso8601String(),
+                'nurse' => ['name' => $procedureRecord->recoveryEpisode->nurse->name],
+            ] : null,
         ];
     }
 

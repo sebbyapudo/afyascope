@@ -138,4 +138,16 @@ export type ProcedureRecordWorkspace = {
         outcome: string | null;
         procedureNotes: string | null;
     };
+    recovery: {
+        id: number;
+        recoveryNumber: string;
+        status: {
+            value: 'in_progress';
+            label: string;
+        };
+        startedAt: string;
+        nurse: {
+            name: string;
+        };
+    } | null;
 };

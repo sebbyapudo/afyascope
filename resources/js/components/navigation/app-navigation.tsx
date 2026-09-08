@@ -11,6 +11,7 @@ import { index as checkInIndex } from '@/routes/check-ins';
 import { index as clinicalConsultationIndex } from '@/routes/clinical/consultations';
 import { index as clinicalProcedureIndex } from '@/routes/clinical/procedures';
 import { index as procedurePreparationIndex } from '@/routes/nursing/pre-procedure-readiness';
+import { index as recoveryIndex } from '@/routes/nursing/recovery';
 import { index as patientIndex } from '@/routes/patients';
 import { index as staffIndex } from '@/routes/staff';
 import { index as visitIndex } from '@/routes/visits';
@@ -126,6 +127,12 @@ export function navigationItems(
             href: procedureBillingIndex(),
             label: 'Procedure Billing',
             visible: capabilities.viewBilling,
+        },
+        {
+            active: isCurrentPath(currentUrl, recoveryIndex.url(), true),
+            href: recoveryIndex(),
+            label: 'Recovery',
+            visible: capabilities.manageRecovery,
         },
         {
             active: isCurrentPath(currentUrl, paymentIndex.url(), true),

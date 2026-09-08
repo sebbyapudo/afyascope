@@ -10,6 +10,7 @@ use App\Models\AuditLog;
 use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureDecision;
 use App\Models\ProcedureRecord;
+use App\Models\RecoveryEpisode;
 use App\Models\User;
 use App\ProcedureRecordStatus;
 use App\StaffRole;
@@ -98,6 +99,7 @@ it('completes exactly once and creates the durable Nursing recovery handoff', fu
         ->and($decision->fresh()->doctor_user_id)->toBe($decision->doctor_user_id)
         ->and($readiness->fresh()->status->value)->toBe('ready')
         ->and($readiness->fresh()->nurse_user_id)->toBe($readiness->nurse_user_id)
+        ->and(RecoveryEpisode::query()->count())->toBe(0)
         ->and(Schema::hasTable('recovery_records'))->toBeFalse()
         ->and(Schema::hasTable('discharges'))->toBeFalse();
 

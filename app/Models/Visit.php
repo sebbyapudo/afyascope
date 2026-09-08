@@ -224,9 +224,17 @@ class Visit extends Model
                         : $this->procedureRecord()->first();
 
                     if ($procedureRecord instanceof ProcedureRecord) {
-                        return $procedureRecord->isReadyForNursingRecovery()
-                            ? 'Ready for Nursing recovery'
-                            : 'Procedure in progress';
+                        if (! $procedureRecord->isReadyForNursingRecovery()) {
+                            return 'Procedure in progress';
+                        }
+
+                        $recoveryEpisode = $this->relationLoaded('recoveryEpisode')
+                            ? $this->recoveryEpisode
+                            : $this->recoveryEpisode()->first();
+
+                        return $recoveryEpisode instanceof RecoveryEpisode
+                            ? 'Recovery in progress'
+                            : 'Ready for Nursing recovery';
                     }
 
                     $readiness = $this->relationLoaded('preProcedureReadiness')

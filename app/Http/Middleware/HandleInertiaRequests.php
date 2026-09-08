@@ -9,6 +9,7 @@ use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\ProcedureRecord;
+use App\Models\RecoveryEpisode;
 use App\Models\Role;
 use App\Models\User;
 use App\Models\Visit;
@@ -93,6 +94,7 @@ class HandleInertiaRequests extends Middleware
                     'manageNursing' => $user?->can(StaffPermission::NursingManage) ?? false,
                     'viewProcedures' => $user?->can(StaffPermission::ProceduresView) ?? false,
                     'manageProcedures' => $user?->can('create', ProcedureRecord::class) ?? false,
+                    'manageRecovery' => $user?->can('create', RecoveryEpisode::class) ?? false,
                 ],
             ],
         ];

@@ -11,6 +11,8 @@ use App\VisitStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\ProcedureRecordFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
+use Illuminate\Database\Eloquent\Attributes\Scope;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -196,6 +198,21 @@ class ProcedureRecord extends Model
     public function isReadyForNursingRecovery(): bool
     {
         return $this->status === ProcedureRecordStatus::Completed;
+    }
+
+    /**
+     * @param  Builder<ProcedureRecord>  $query
+     * @return Builder<ProcedureRecord>
+     */
+    #[Scope]
+    protected function readyForNursingRecovery(Builder $query): Builder
+    {
+        return $query
+            ->where('status', ProcedureRecordStatus::Completed->value)
+            ->whereHas('visit', function (Builder $visitQuery): void {
+                $visitQuery->where('status', VisitStatus::CheckedIn->value);
+            })
+            ->whereDoesntHave('recoveryEpisode');
     }
 
     protected static function booted(): void

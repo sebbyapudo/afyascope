@@ -46,6 +46,7 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'manageNursing' => false,
                 'viewProcedures' => false,
                 'manageProcedures' => false,
+                'manageRecovery' => false,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -86,6 +87,7 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'manageNursing' => false,
                 'viewProcedures' => false,
                 'manageProcedures' => false,
+                'manageRecovery' => false,
             ])
         );
 });
@@ -119,6 +121,7 @@ test('Receptionist Inertia responses expose only the Patient capabilities grante
             ->where('auth.capabilities.manageNursing', false)
             ->where('auth.capabilities.viewProcedures', false)
             ->where('auth.capabilities.manageProcedures', false)
+            ->where('auth.capabilities.manageRecovery', false)
         );
 });
 
@@ -146,6 +149,7 @@ test('Accountant Inertia responses expose only the billing capabilities granted 
             ->where('auth.capabilities.manageNursing', false)
             ->where('auth.capabilities.viewProcedures', false)
             ->where('auth.capabilities.manageProcedures', false)
+            ->where('auth.capabilities.manageRecovery', false)
         );
 });
 
@@ -173,6 +177,7 @@ test('Doctor Inertia responses expose only the consultation capabilities granted
             ->where('auth.capabilities.manageNursing', false)
             ->where('auth.capabilities.viewProcedures', true)
             ->where('auth.capabilities.manageProcedures', true)
+            ->where('auth.capabilities.manageRecovery', false)
         );
 });
 
@@ -187,6 +192,7 @@ test('Nurse Inertia responses expose only the Nursing preparation capability', f
             ->where('auth.capabilities.manageConsultations', false)
             ->where('auth.capabilities.viewProcedures', true)
             ->where('auth.capabilities.manageProcedures', false)
+            ->where('auth.capabilities.manageRecovery', true)
             ->where('auth.capabilities.viewBilling', false)
             ->where('auth.capabilities.createBilling', false)
             ->where('auth.capabilities.viewPayments', false)

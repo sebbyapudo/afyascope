@@ -75,7 +75,7 @@ it('rejects direct creation and arbitrary lifecycle context or timestamp changes
     $forged->completed_at = now();
 
     expect(fn () => $forged->save())
-        ->toThrow(LogicException::class, 'future authoritative Nursing workflow');
+        ->toThrow(LogicException::class, 'authoritative Nursing workflow');
 
     $recoveryEpisode = RecoveryEpisode::factory()->createAuthoritativeRecoveryFixture(
         $procedureRecord,
