@@ -149,3 +149,18 @@ test('only Doctor manages procedures while Doctor and Nurse may view procedure c
     'Administrator' => [StaffRole::Administrator, false, false],
     'Management' => [StaffRole::Management, false, false],
 ]);
+
+test('only Nurse manages recovery while Nurse and Doctor may view recovery context', function (StaffRole $role, bool $canView, bool $canManage) {
+    $user = User::factory()->forRole($role)->create();
+    $gate = Gate::forUser($user);
+
+    expect($gate->allows(StaffPermission::RecoveryView))->toBe($canView)
+        ->and($gate->allows(StaffPermission::RecoveryManage))->toBe($canManage);
+})->with([
+    'Receptionist' => [StaffRole::Receptionist, false, false],
+    'Accountant' => [StaffRole::Accountant, false, false],
+    'Doctor' => [StaffRole::Doctor, true, false],
+    'Nurse' => [StaffRole::Nurse, true, true],
+    'Administrator' => [StaffRole::Administrator, false, false],
+    'Management' => [StaffRole::Management, false, false],
+]);

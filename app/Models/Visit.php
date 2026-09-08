@@ -6,7 +6,6 @@ use App\BillType;
 use App\ConsultationStatus;
 use App\PreProcedureReadinessStatus;
 use App\ProcedureDecisionOutcome;
-use App\ProcedureRecordStatus;
 use App\VisitStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\VisitFactory;
@@ -40,6 +39,7 @@ use LogicException;
  * @property-read ProcedureDecision|null $procedureDecision
  * @property-read PreProcedureReadiness|null $preProcedureReadiness
  * @property-read ProcedureRecord|null $procedureRecord
+ * @property-read RecoveryEpisode|null $recoveryEpisode
  * @property-read Patient $patient
  * @property-read VisitCheckIn|null $checkIn
  */
@@ -130,6 +130,12 @@ class Visit extends Model
         return $this->hasOne(ProcedureRecord::class);
     }
 
+    /** @return HasOne<RecoveryEpisode, $this> */
+    public function recoveryEpisode(): HasOne
+    {
+        return $this->hasOne(RecoveryEpisode::class);
+    }
+
     /**
      * @return HasOne<VisitCheckIn, $this>
      */
@@ -218,7 +224,7 @@ class Visit extends Model
                         : $this->procedureRecord()->first();
 
                     if ($procedureRecord instanceof ProcedureRecord) {
-                        return $procedureRecord->status === ProcedureRecordStatus::Completed
+                        return $procedureRecord->isReadyForNursingRecovery()
                             ? 'Ready for Nursing recovery'
                             : 'Procedure in progress';
                     }

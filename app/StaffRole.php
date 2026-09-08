@@ -33,6 +33,8 @@ enum StaffRole: string
                 StaffPermission::DashboardView,
                 StaffPermission::NursingManage,
                 StaffPermission::ProceduresView,
+                StaffPermission::RecoveryView,
+                StaffPermission::RecoveryManage,
             ],
             self::Doctor => [
                 StaffPermission::DashboardView,
@@ -40,6 +42,7 @@ enum StaffRole: string
                 StaffPermission::ConsultationsManage,
                 StaffPermission::ProceduresView,
                 StaffPermission::ProceduresManage,
+                StaffPermission::RecoveryView,
             ],
             self::Accountant => [
                 StaffPermission::DashboardView,

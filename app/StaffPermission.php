@@ -30,6 +30,8 @@ enum StaffPermission: string
     case NursingManage = 'nursing.manage';
     case ProceduresView = 'procedures.view';
     case ProceduresManage = 'procedures.manage';
+    case RecoveryView = 'recovery.view';
+    case RecoveryManage = 'recovery.manage';
 
     public function displayName(): string
     {
@@ -60,6 +62,8 @@ enum StaffPermission: string
             self::NursingManage => 'Manage pre-procedure readiness',
             self::ProceduresView => 'View procedures',
             self::ProceduresManage => 'Manage procedures',
+            self::RecoveryView => 'View recovery',
+            self::RecoveryManage => 'Manage recovery',
         };
     }
 }

@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -43,6 +44,7 @@ use LogicException;
  * @property-read PreProcedureReadiness $preProcedureReadiness
  * @property-read ServiceCatalogItem $serviceCatalogItem
  * @property-read User $doctor
+ * @property-read RecoveryEpisode|null $recoveryEpisode
  */
 #[Fillable([
     'findings',
@@ -92,6 +94,12 @@ class ProcedureRecord extends Model
     public function doctor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'doctor_user_id');
+    }
+
+    /** @return HasOne<RecoveryEpisode, $this> */
+    public function recoveryEpisode(): HasOne
+    {
+        return $this->hasOne(RecoveryEpisode::class);
     }
 
     public static function startFromDoctorWorkflow(
@@ -183,6 +191,11 @@ class ProcedureRecord extends Model
         return filled($this->findings)
             && filled($this->outcome)
             && (! $this->specimens_taken || filled($this->specimen_notes));
+    }
+
+    public function isReadyForNursingRecovery(): bool
+    {
+        return $this->status === ProcedureRecordStatus::Completed;
     }
 
     protected static function booted(): void

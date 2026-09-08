@@ -26,6 +26,7 @@ use App\Models\ProcedureBillingHandoff;
 use App\Models\ProcedureDecision;
 use App\Models\ProcedureRecord;
 use App\Models\Receipt;
+use App\Models\RecoveryEpisode;
 use App\Models\ServiceCatalogItem;
 use App\Models\User;
 use App\Models\VisitCheckIn;
@@ -159,6 +160,8 @@ it('accepts the complete procedure-required Phase 4 journey through Nursing reco
         ->and(FinancialClearance::query()->where('bill_id', $procedureBill->id)->count())->toBe(1)
         ->and(PreProcedureReadiness::query()->where('visit_id', $visit->id)->count())->toBe(1)
         ->and(ProcedureRecord::query()->where('visit_id', $visit->id)->count())->toBe(1)
+        ->and(RecoveryEpisode::query()->where('visit_id', $visit->id)->count())->toBe(0)
+        ->and(Schema::hasTable('recovery_episodes'))->toBeTrue()
         ->and(Schema::hasTable('recovery_records'))->toBeFalse()
         ->and(Schema::hasTable('discharges'))->toBeFalse()
         ->and(Route::has('recovery.store'))->toBeFalse()

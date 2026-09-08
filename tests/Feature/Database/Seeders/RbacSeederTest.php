@@ -36,6 +36,8 @@ test('the canonical roles and permissions are seeded exactly', function () {
         'payments.view' => 'View payments and receipts',
         'procedures.manage' => 'Manage procedures',
         'procedures.view' => 'View procedures',
+        'recovery.manage' => 'Manage recovery',
+        'recovery.view' => 'View recovery',
         'roles.view' => 'View roles',
         'users.manage' => 'Manage staff users',
         'users.view' => 'View staff users',
@@ -68,9 +70,16 @@ test('canonical role permission mappings are exact', function () {
             'dashboard.view',
             'procedures.manage',
             'procedures.view',
+            'recovery.view',
         ],
         'management' => ['audit.view', 'dashboard.view'],
-        'nurse' => ['dashboard.view', 'nursing.manage', 'procedures.view'],
+        'nurse' => [
+            'dashboard.view',
+            'nursing.manage',
+            'procedures.view',
+            'recovery.manage',
+            'recovery.view',
+        ],
         'receptionist' => [
             'appointments.create',
             'appointments.update',
@@ -96,7 +105,7 @@ test('canonical role permission mappings are exact', function () {
         ->all();
 
     expect($actualMappings)->toBe($expectedMappings)
-        ->and(DB::table('permission_role')->count())->toBe(33);
+        ->and(DB::table('permission_role')->count())->toBe(36);
 });
 
 test('the rbac seeder is idempotent and repairs canonical mappings', function () {
@@ -114,7 +123,7 @@ test('the rbac seeder is idempotent and repairs canonical mappings', function ()
     expect(Role::query()->orderBy('slug')->pluck('id', 'slug')->all())->toBe($roleIds)
         ->and(Permission::query()->orderBy('slug')->pluck('id', 'slug')->all())->toBe($permissionIds)
         ->and(Role::query()->count())->toBe(6)
-        ->and(Permission::query()->count())->toBe(26)
+        ->and(Permission::query()->count())->toBe(28)
         ->and($management->fresh()->permissions->pluck('slug')->sort()->values()->all())
         ->toBe(['audit.view', 'dashboard.view']);
 });
