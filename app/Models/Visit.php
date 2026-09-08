@@ -6,6 +6,7 @@ use App\BillType;
 use App\ConsultationStatus;
 use App\PreProcedureReadinessStatus;
 use App\ProcedureDecisionOutcome;
+use App\ProcedureRecordStatus;
 use App\VisitStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\VisitFactory;
@@ -38,6 +39,7 @@ use LogicException;
  * @property-read ProcedureBillingHandoff|null $procedureBillingHandoff
  * @property-read ProcedureDecision|null $procedureDecision
  * @property-read PreProcedureReadiness|null $preProcedureReadiness
+ * @property-read ProcedureRecord|null $procedureRecord
  * @property-read Patient $patient
  * @property-read VisitCheckIn|null $checkIn
  */
@@ -120,6 +122,12 @@ class Visit extends Model
     public function preProcedureReadiness(): HasOne
     {
         return $this->hasOne(PreProcedureReadiness::class);
+    }
+
+    /** @return HasOne<ProcedureRecord, $this> */
+    public function procedureRecord(): HasOne
+    {
+        return $this->hasOne(ProcedureRecord::class);
     }
 
     /**
@@ -205,6 +213,26 @@ class Visit extends Model
                     : $this->procedureDecision()->first();
 
                 if ($procedureDecision?->outcome === ProcedureDecisionOutcome::ProcedureRequired) {
+                    $procedureRecord = $this->relationLoaded('procedureRecord')
+                        ? $this->procedureRecord
+                        : $this->procedureRecord()->first();
+
+                    if ($procedureRecord instanceof ProcedureRecord) {
+                        return $procedureRecord->status === ProcedureRecordStatus::Completed
+                            ? 'Ready for Nursing recovery'
+                            : 'Procedure in progress';
+                    }
+
+                    $readiness = $this->relationLoaded('preProcedureReadiness')
+                        ? $this->preProcedureReadiness
+                        : $this->preProcedureReadiness()->first();
+
+                    if ($readiness instanceof PreProcedureReadiness) {
+                        return $readiness->status === PreProcedureReadinessStatus::Ready
+                            ? 'Ready for Doctor procedure'
+                            : 'Nursing preparation in progress';
+                    }
+
                     $procedureBill = $this->relationLoaded('procedureBill')
                         ? $this->procedureBill
                         : $this->procedureBill()->with([
@@ -233,15 +261,7 @@ class Visit extends Model
                         return 'Awaiting procedure financial clearance';
                     }
 
-                    $readiness = $this->relationLoaded('preProcedureReadiness')
-                        ? $this->preProcedureReadiness
-                        : $this->preProcedureReadiness()->first();
-
-                    return match ($readiness?->status) {
-                        PreProcedureReadinessStatus::InPreparation => 'Nursing preparation in progress',
-                        PreProcedureReadinessStatus::Ready => 'Ready for Doctor procedure',
-                        default => 'Ready for Nursing preparation',
-                    };
+                    return 'Ready for Nursing preparation';
                 }
 
                 return $procedureDecision?->outcome === ProcedureDecisionOutcome::NoProcedure

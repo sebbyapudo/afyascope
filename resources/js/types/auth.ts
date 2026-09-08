@@ -34,6 +34,8 @@ export type Capabilities = {
     viewConsultations: boolean;
     manageConsultations: boolean;
     manageNursing: boolean;
+    viewProcedures: boolean;
+    manageProcedures: boolean;
 };
 
 export type Auth = {

@@ -10,6 +10,7 @@ import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { cn } from '@/lib/utils';
 import { index, update } from '@/routes/clinical/consultations';
 import { store as storeProcedureDecision } from '@/routes/clinical/consultations/procedure-decision';
+import { show as showProcedure } from '@/routes/clinical/procedures';
 import type {
     AsaClassificationOption,
     ClinicalConsultationWorkspace,
@@ -451,6 +452,40 @@ export default function ConsultationShow({
                                                     }
                                                 </span>
                                             </>
+                                        ) : (
+                                            'Not started'
+                                        )}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                        Procedure record
+                                    </dt>
+                                    <dd className="mt-2 text-sm text-text">
+                                        {consultation.procedureDecision
+                                            .procedureRecord ? (
+                                            <Link
+                                                className={textLinkStyles}
+                                                href={showProcedure(
+                                                    consultation
+                                                        .procedureDecision
+                                                        .procedureRecord.id,
+                                                )}
+                                            >
+                                                {
+                                                    consultation
+                                                        .procedureDecision
+                                                        .procedureRecord
+                                                        .procedureNumber
+                                                }{' '}
+                                                —{' '}
+                                                {
+                                                    consultation
+                                                        .procedureDecision
+                                                        .procedureRecord.status
+                                                        .label
+                                                }
+                                            </Link>
                                         ) : (
                                             'Not started'
                                         )}

@@ -14,6 +14,7 @@ use App\Models\Patient;
 use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureBillingHandoff;
 use App\Models\ProcedureDecision;
+use App\Models\ProcedureRecord;
 use App\Models\ServiceCatalogItem;
 use App\Models\User;
 use App\Models\Visit;
@@ -143,6 +144,7 @@ class ConsultationController extends Controller
             'procedureDecision.procedureBillingHandoff:id,procedure_decision_id,handoff_number',
             'procedureDecision.preProcedureReadiness:id,procedure_decision_id,nurse_user_id,readiness_number,status,started_at,completed_at',
             'procedureDecision.preProcedureReadiness.nurse:id,name',
+            'procedureDecision.procedureRecord:id,procedure_decision_id,procedure_number,status',
             'procedureDecision.serviceCatalogItem:id,name',
             'visit:id,patient_id,visit_number,occurred_at,status',
             'visit.patient:id,patient_number,first_name,middle_name,last_name',
@@ -308,6 +310,14 @@ class ConsultationController extends Controller
                         'name' => $procedureDecision->preProcedureReadiness->nurse->name,
                     ],
                     'completedAt' => $procedureDecision->preProcedureReadiness->completed_at?->toIso8601String(),
+                ] : null,
+                'procedureRecord' => $procedureDecision->procedureRecord instanceof ProcedureRecord ? [
+                    'id' => $procedureDecision->procedureRecord->id,
+                    'procedureNumber' => $procedureDecision->procedureRecord->procedure_number,
+                    'status' => [
+                        'value' => $procedureDecision->procedureRecord->status->value,
+                        'label' => $procedureDecision->procedureRecord->status->displayName(),
+                    ],
                 ] : null,
             ] : null,
         ];

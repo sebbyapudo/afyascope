@@ -7,6 +7,7 @@ use App\Http\Controllers\AppointmentVisitController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BillController;
 use App\Http\Controllers\CompletePreProcedureReadinessController;
+use App\Http\Controllers\CompleteProcedureRecordController;
 use App\Http\Controllers\ConsultationBillingController;
 use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\ConsultationFinancialClearanceController;
@@ -19,6 +20,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\PreProcedureReadinessController;
 use App\Http\Controllers\ProcedureBillingController;
 use App\Http\Controllers\ProcedureDecisionController;
+use App\Http\Controllers\ProcedureRecordController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitCheckInController;
@@ -31,6 +33,7 @@ use App\Models\FinancialClearance;
 use App\Models\Patient;
 use App\Models\Payment;
 use App\Models\PreProcedureReadiness;
+use App\Models\ProcedureRecord;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitCheckIn;
@@ -43,6 +46,22 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/clinical/procedures', [ProcedureRecordController::class, 'index'])
+        ->can('viewAny', ProcedureRecord::class)
+        ->name('clinical.procedures.index');
+    Route::post('/clinical/procedures/visits/{visit}', [ProcedureRecordController::class, 'store'])
+        ->can('create', ProcedureRecord::class)
+        ->name('clinical.procedures.store');
+    Route::get('/clinical/procedures/{procedureRecord}', [ProcedureRecordController::class, 'show'])
+        ->can('view', 'procedureRecord')
+        ->name('clinical.procedures.show');
+    Route::put('/clinical/procedures/{procedureRecord}', [ProcedureRecordController::class, 'update'])
+        ->can('update', 'procedureRecord')
+        ->name('clinical.procedures.update');
+    Route::post('/clinical/procedures/{procedureRecord}/complete', CompleteProcedureRecordController::class)
+        ->can('complete', 'procedureRecord')
+        ->name('clinical.procedures.complete');
+
     Route::get('/nursing/procedure-preparations', [PreProcedureReadinessController::class, 'index'])
         ->can('viewAny', PreProcedureReadiness::class)
         ->name('nursing.pre-procedure-readiness.index');

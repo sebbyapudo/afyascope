@@ -44,6 +44,8 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'viewConsultations' => false,
                 'manageConsultations' => false,
                 'manageNursing' => false,
+                'viewProcedures' => false,
+                'manageProcedures' => false,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -82,6 +84,8 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'viewConsultations' => false,
                 'manageConsultations' => false,
                 'manageNursing' => false,
+                'viewProcedures' => false,
+                'manageProcedures' => false,
             ])
         );
 });
@@ -113,6 +117,8 @@ test('Receptionist Inertia responses expose only the Patient capabilities grante
             ->where('auth.capabilities.viewConsultations', false)
             ->where('auth.capabilities.manageConsultations', false)
             ->where('auth.capabilities.manageNursing', false)
+            ->where('auth.capabilities.viewProcedures', false)
+            ->where('auth.capabilities.manageProcedures', false)
         );
 });
 
@@ -138,6 +144,8 @@ test('Accountant Inertia responses expose only the billing capabilities granted 
             ->where('auth.capabilities.viewConsultations', false)
             ->where('auth.capabilities.manageConsultations', false)
             ->where('auth.capabilities.manageNursing', false)
+            ->where('auth.capabilities.viewProcedures', false)
+            ->where('auth.capabilities.manageProcedures', false)
         );
 });
 
@@ -163,6 +171,8 @@ test('Doctor Inertia responses expose only the consultation capabilities granted
             ->where('auth.capabilities.viewUsers', false)
             ->where('auth.capabilities.viewAudit', false)
             ->where('auth.capabilities.manageNursing', false)
+            ->where('auth.capabilities.viewProcedures', true)
+            ->where('auth.capabilities.manageProcedures', true)
         );
 });
 
@@ -175,6 +185,8 @@ test('Nurse Inertia responses expose only the Nursing preparation capability', f
             ->where('auth.capabilities.manageNursing', true)
             ->where('auth.capabilities.viewConsultations', false)
             ->where('auth.capabilities.manageConsultations', false)
+            ->where('auth.capabilities.viewProcedures', true)
+            ->where('auth.capabilities.manageProcedures', false)
             ->where('auth.capabilities.viewBilling', false)
             ->where('auth.capabilities.createBilling', false)
             ->where('auth.capabilities.viewPayments', false)

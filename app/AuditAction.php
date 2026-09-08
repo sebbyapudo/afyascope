@@ -26,6 +26,9 @@ enum AuditAction: string
     case ConsultationProcedureDecided = 'consultation.procedure_decided';
     case NursingPreparationStarted = 'nursing.preparation_started';
     case NursingReadinessCompleted = 'nursing.readiness_completed';
+    case ProcedureStarted = 'procedure.started';
+    case ProcedureDocumentationUpdated = 'procedure.documentation_updated';
+    case ProcedureCompleted = 'procedure.completed';
 
     public function displayName(): string
     {
@@ -52,6 +55,9 @@ enum AuditAction: string
             self::ConsultationProcedureDecided => 'Consultation procedure decided',
             self::NursingPreparationStarted => 'Nursing preparation started',
             self::NursingReadinessCompleted => 'Nursing readiness completed',
+            self::ProcedureStarted => 'Procedure started',
+            self::ProcedureDocumentationUpdated => 'Procedure documentation updated',
+            self::ProcedureCompleted => 'Procedure completed',
         };
     }
 }

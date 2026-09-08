@@ -134,3 +134,18 @@ test('only Nurse receives the pre-procedure readiness gate', function (StaffRole
     'Administrator' => [StaffRole::Administrator, false],
     'Management' => [StaffRole::Management, false],
 ]);
+
+test('only Doctor manages procedures while Doctor and Nurse may view procedure context', function (StaffRole $role, bool $canView, bool $canManage) {
+    $user = User::factory()->forRole($role)->create();
+    $gate = Gate::forUser($user);
+
+    expect($gate->allows(StaffPermission::ProceduresView))->toBe($canView)
+        ->and($gate->allows(StaffPermission::ProceduresManage))->toBe($canManage);
+})->with([
+    'Receptionist' => [StaffRole::Receptionist, false, false],
+    'Accountant' => [StaffRole::Accountant, false, false],
+    'Doctor' => [StaffRole::Doctor, true, true],
+    'Nurse' => [StaffRole::Nurse, true, false],
+    'Administrator' => [StaffRole::Administrator, false, false],
+    'Management' => [StaffRole::Management, false, false],
+]);

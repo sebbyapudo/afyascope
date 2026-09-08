@@ -78,6 +78,14 @@ export type ClinicalProcedureDecision = {
         };
         completedAt: string | null;
     } | null;
+    procedureRecord: {
+        id: number;
+        procedureNumber: string;
+        status: {
+            value: 'completed' | 'in_progress';
+            label: string;
+        };
+    } | null;
 };
 
 export type ProcedureServiceOption = {

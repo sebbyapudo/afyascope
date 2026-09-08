@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -35,6 +36,7 @@ use LogicException;
  * @property-read Visit $visit
  * @property-read ProcedureDecision $procedureDecision
  * @property-read User $nurse
+ * @property-read ProcedureRecord|null $procedureRecord
  */
 #[Fillable([
     'consent_verified',
@@ -71,6 +73,12 @@ class PreProcedureReadiness extends Model
     public function nurse(): BelongsTo
     {
         return $this->belongsTo(User::class, 'nurse_user_id');
+    }
+
+    /** @return HasOne<ProcedureRecord, $this> */
+    public function procedureRecord(): HasOne
+    {
+        return $this->hasOne(ProcedureRecord::class);
     }
 
     public static function startForNursingWorkflow(
