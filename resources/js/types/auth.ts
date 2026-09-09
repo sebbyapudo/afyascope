@@ -37,6 +37,7 @@ export type Capabilities = {
     viewProcedures: boolean;
     manageProcedures: boolean;
     manageRecovery: boolean;
+    viewPatientActivity: boolean;
 };
 
 export type Auth = {

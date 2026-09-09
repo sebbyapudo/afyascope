@@ -12,6 +12,7 @@ import { index as clinicalConsultationIndex } from '@/routes/clinical/consultati
 import { index as clinicalProcedureIndex } from '@/routes/clinical/procedures';
 import { index as procedurePreparationIndex } from '@/routes/nursing/pre-procedure-readiness';
 import { index as recoveryIndex } from '@/routes/nursing/recovery';
+import { index as patientActivityIndex } from '@/routes/patient-activity';
 import { index as patientIndex } from '@/routes/patients';
 import { index as staffIndex } from '@/routes/staff';
 import { index as visitIndex } from '@/routes/visits';
@@ -145,6 +146,12 @@ export function navigationItems(
             href: clearanceIndex(),
             label: 'Financial Clearance',
             visible: capabilities.viewClearance,
+        },
+        {
+            active: isCurrentPath(currentUrl, patientActivityIndex.url()),
+            href: patientActivityIndex(),
+            label: 'Patient tracking',
+            visible: capabilities.viewPatientActivity,
         },
         {
             active: isCurrentPath(currentUrl, staffIndex.url(), true),

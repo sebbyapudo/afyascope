@@ -95,6 +95,7 @@ class HandleInertiaRequests extends Middleware
                     'viewProcedures' => $user?->can(StaffPermission::ProceduresView) ?? false,
                     'manageProcedures' => $user?->can('create', ProcedureRecord::class) ?? false,
                     'manageRecovery' => $user?->can('create', RecoveryEpisode::class) ?? false,
+                    'viewPatientActivity' => $user?->can(StaffPermission::PatientActivityView) ?? false,
                 ],
             ],
         ];

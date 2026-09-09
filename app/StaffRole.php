@@ -35,6 +35,7 @@ enum StaffRole: string
                 StaffPermission::ProceduresView,
                 StaffPermission::RecoveryView,
                 StaffPermission::RecoveryManage,
+                StaffPermission::PatientActivityView,
             ],
             self::Doctor => [
                 StaffPermission::DashboardView,
@@ -43,6 +44,7 @@ enum StaffRole: string
                 StaffPermission::ProceduresView,
                 StaffPermission::ProceduresManage,
                 StaffPermission::RecoveryView,
+                StaffPermission::PatientActivityView,
             ],
             self::Accountant => [
                 StaffPermission::DashboardView,
@@ -52,6 +54,7 @@ enum StaffRole: string
                 StaffPermission::PaymentsCreate,
                 StaffPermission::ClearanceView,
                 StaffPermission::ClearanceCreate,
+                StaffPermission::PatientActivityView,
             ],
             self::Receptionist => [
                 StaffPermission::DashboardView,
@@ -65,6 +68,7 @@ enum StaffRole: string
                 StaffPermission::AppointmentsUpdate,
                 StaffPermission::CheckInView,
                 StaffPermission::CheckInCreate,
+                StaffPermission::PatientActivityView,
             ],
             self::Administrator => [
                 StaffPermission::DashboardView,

@@ -164,3 +164,16 @@ test('only Nurse manages recovery while Nurse and Doctor may view recovery conte
     'Administrator' => [StaffRole::Administrator, false, false],
     'Management' => [StaffRole::Management, false, false],
 ]);
+
+test('only operational roles receive personal Patient activity access', function (StaffRole $role, bool $allowed) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->allows(StaffPermission::PatientActivityView))->toBe($allowed);
+})->with([
+    'Receptionist' => [StaffRole::Receptionist, true],
+    'Accountant' => [StaffRole::Accountant, true],
+    'Doctor' => [StaffRole::Doctor, true],
+    'Nurse' => [StaffRole::Nurse, true],
+    'Administrator' => [StaffRole::Administrator, false],
+    'Management' => [StaffRole::Management, false],
+]);

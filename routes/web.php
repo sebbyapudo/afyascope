@@ -12,6 +12,7 @@ use App\Http\Controllers\ConsultationBillingController;
 use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\ConsultationFinancialClearanceController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\PatientActivityController;
 use App\Http\Controllers\PatientAppointmentController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicateController;
@@ -49,6 +50,10 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/patient-activity', PatientActivityController::class)
+        ->middleware('can:patient-activity.view')
+        ->name('patient-activity.index');
+
     Route::get('/clinical/procedures', [ProcedureRecordController::class, 'index'])
         ->can('viewAny', ProcedureRecord::class)
         ->name('clinical.procedures.index');

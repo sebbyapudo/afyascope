@@ -5,6 +5,7 @@ export type * from './billing';
 export type * from './check-in';
 export type * from './consultation';
 export type * from './patient';
+export type * from './patient-activity';
 export type * from './pre-procedure-readiness';
 export type * from './procedure-record';
 export type * from './recovery';
