@@ -13,4 +13,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/Models/{Patient,Visit}.php | .ai/rules/models.md |
 | app/{Actions/Nursing,Models,Policies,Http/Controllers}/**/*.php | .ai/rules/nursing-models-policies-http-controllers.md |
 | app/{Actions/Procedures,Models,Policies,Http/Controllers}/** | .ai/rules/procedures-models-policies-http-controllers.md |
+| app/{Actions/Nursing,Models,Http/Controllers,Http/Requests}/**/*.php | .ai/rules/requests.md |
 | resources/** | .ai/rules/resources.md |

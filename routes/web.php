@@ -23,6 +23,7 @@ use App\Http\Controllers\ProcedureDecisionController;
 use App\Http\Controllers\ProcedureRecordController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\RecoveryEpisodeController;
+use App\Http\Controllers\RecoveryObservationController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitCheckInController;
 use App\Http\Controllers\VisitController;
@@ -92,6 +93,9 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/nursing/recovery/{recoveryEpisode}', [RecoveryEpisodeController::class, 'show'])
         ->can('view', 'recoveryEpisode')
         ->name('nursing.recovery.show');
+    Route::post('/nursing/recovery/{recoveryEpisode}/observations', [RecoveryObservationController::class, 'store'])
+        ->can('update', 'recoveryEpisode')
+        ->name('nursing.recovery.observations.store');
 
     Route::get('/clinical/consultations', [ConsultationController::class, 'index'])
         ->can('viewAny', Consultation::class)

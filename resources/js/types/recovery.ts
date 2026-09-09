@@ -25,10 +25,42 @@ export type RecoveryQueue = {
         currentPage: number;
         from: number | null;
         lastPage: number;
+        pageName: 'awaiting_page' | 'active_page';
         perPage: number;
         to: number | null;
         total: number;
     };
+};
+
+export type ActiveRecoveryQueueItem = {
+    id: number;
+    recoveryNumber: string;
+    startedAt: string;
+    patient: { patientNumber: string; name: string };
+    visit: { visitNumber: string; nextStep: string };
+    procedure: { procedureNumber: string; name: string };
+    doctor: { name: string };
+};
+
+export type ActiveRecoveryQueue = Omit<RecoveryQueue, 'data'> & {
+    data: ActiveRecoveryQueueItem[];
+};
+
+export type RecoveryObservation = {
+    id: number;
+    generalRecoveryStatus: string;
+    painScore: number | null;
+    nausea: boolean;
+    vomiting: boolean;
+    systolicBloodPressure: number | null;
+    diastolicBloodPressure: number | null;
+    pulseRate: number | null;
+    respiratoryRate: number | null;
+    oxygenSaturation: number | null;
+    supplementalOxygen: boolean;
+    nursingNote: string | null;
+    recordedAt: string;
+    recordedBy: { name: string };
 };
 
 export type RecoveryWorkspace = {
@@ -62,4 +94,5 @@ export type RecoveryWorkspace = {
     doctor: {
         name: string;
     };
+    observations: RecoveryObservation[];
 };

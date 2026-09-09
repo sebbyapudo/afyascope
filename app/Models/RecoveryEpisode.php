@@ -7,9 +7,11 @@ use App\StaffRole;
 use App\VisitStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\RecoveryEpisodeFactory;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -27,6 +29,7 @@ use LogicException;
  * @property-read Visit $visit
  * @property-read ProcedureRecord $procedureRecord
  * @property-read User $nurse
+ * @property-read Collection<int, RecoveryObservation> $observations
  */
 class RecoveryEpisode extends Model
 {
@@ -56,6 +59,12 @@ class RecoveryEpisode extends Model
     public function nurse(): BelongsTo
     {
         return $this->belongsTo(User::class, 'nurse_user_id');
+    }
+
+    /** @return HasMany<RecoveryObservation, $this> */
+    public function observations(): HasMany
+    {
+        return $this->hasMany(RecoveryObservation::class);
     }
 
     public static function startFromNursingWorkflow(

@@ -7,7 +7,9 @@ use App\Http\Requests\StoreRecoveryEpisodeRequest;
 use App\Models\Patient;
 use App\Models\ProcedureRecord;
 use App\Models\RecoveryEpisode;
+use App\Models\RecoveryObservation;
 use App\Models\User;
+use App\RecoveryEpisodeStatus;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -16,22 +18,53 @@ use Inertia\Response;
 
 class RecoveryEpisodeController extends Controller
 {
-    public function index(): Response
+    public function index(Request $request): Response
     {
+        $actor = $request->user();
+
+        if (! $actor instanceof User) {
+            abort(403);
+        }
+
         $procedures = ProcedureRecord::query()
             ->readyForNursingRecovery()
             ->with($this->procedureContextRelations())
             ->orderBy('completed_at')
             ->orderBy('id')
-            ->paginate(15)
+            ->paginate(15, ['*'], 'awaiting_page')
+            ->withQueryString();
+
+        $activeRecoveries = RecoveryEpisode::query()
+            ->where('nurse_user_id', $actor->getKey())
+            ->where('status', RecoveryEpisodeStatus::InProgress)
+            ->with([
+                'procedureRecord:id,visit_id,service_catalog_item_id,doctor_user_id,procedure_number,status,completed_at',
+                'procedureRecord.doctor:id,name',
+                'procedureRecord.serviceCatalogItem:id,name',
+                'visit:id,patient_id,visit_number,occurred_at,status',
+                'visit.patient:id,patient_number,first_name,middle_name,last_name',
+                'visit.consultation:id,visit_id,status',
+                'visit.procedureDecision:id,visit_id,outcome',
+                'visit.procedureRecord:id,visit_id,status',
+                'visit.recoveryEpisode:id,visit_id,status',
+            ])
+            ->orderBy('started_at')
+            ->orderBy('id')
+            ->paginate(15, ['*'], 'active_page')
             ->withQueryString();
 
         return Inertia::render('nursing/recovery/index', [
-            'procedures' => [
+            'awaitingRecoveries' => [
                 'data' => $procedures->getCollection()
                     ->map(fn (ProcedureRecord $procedureRecord): array => $this->procedureContextData($procedureRecord))
                     ->values(),
                 'pagination' => $this->paginationData($procedures),
+            ],
+            'activeRecoveries' => [
+                'data' => $activeRecoveries->getCollection()
+                    ->map(fn (RecoveryEpisode $episode): array => $this->activeRecoveryData($episode))
+                    ->values(),
+                'pagination' => $this->paginationData($activeRecoveries),
             ],
         ]);
     }
@@ -81,6 +114,8 @@ class RecoveryEpisodeController extends Controller
             'visit.procedureDecision:id,visit_id,outcome',
             'visit.procedureRecord:id,visit_id,status',
             'visit.recoveryEpisode:id,visit_id,status',
+            'observations' => fn ($query) => $query->orderByDesc('recorded_at')->orderByDesc('id'),
+            'observations.recordedBy:id,name',
         ]);
 
         $visit = $recoveryEpisode->visit;
@@ -115,6 +150,23 @@ class RecoveryEpisodeController extends Controller
                     'completedAt' => $procedureRecord->completed_at?->toIso8601String(),
                 ],
                 'doctor' => ['name' => $procedureRecord->doctor->name],
+                'observations' => $recoveryEpisode->observations
+                    ->map(fn (RecoveryObservation $observation): array => [
+                        'id' => $observation->id,
+                        'generalRecoveryStatus' => $observation->general_recovery_status,
+                        'painScore' => $observation->pain_score,
+                        'nausea' => $observation->nausea,
+                        'vomiting' => $observation->vomiting,
+                        'systolicBloodPressure' => $observation->systolic_blood_pressure,
+                        'diastolicBloodPressure' => $observation->diastolic_blood_pressure,
+                        'pulseRate' => $observation->pulse_rate,
+                        'respiratoryRate' => $observation->respiratory_rate,
+                        'oxygenSaturation' => $observation->oxygen_saturation,
+                        'supplementalOxygen' => $observation->supplemental_oxygen,
+                        'nursingNote' => $observation->nursing_note,
+                        'recordedAt' => $observation->recorded_at->toIso8601String(),
+                        'recordedBy' => ['name' => $observation->recordedBy->name],
+                    ])->values(),
             ],
             'status' => $request->session()->get('status'),
         ]);
@@ -159,9 +211,38 @@ class RecoveryEpisodeController extends Controller
         ];
     }
 
+    /** @return array<string, mixed> */
+    private function activeRecoveryData(RecoveryEpisode $recoveryEpisode): array
+    {
+        $procedureRecord = $recoveryEpisode->procedureRecord;
+        $visit = $recoveryEpisode->visit;
+        $patient = $visit->patient;
+
+        return [
+            'id' => $recoveryEpisode->id,
+            'recoveryNumber' => $recoveryEpisode->recovery_number,
+            'startedAt' => $recoveryEpisode->started_at->toIso8601String(),
+            'patient' => [
+                'patientNumber' => $patient->patient_number,
+                'name' => $this->patientName($patient),
+            ],
+            'visit' => [
+                'visitNumber' => $visit->visit_number,
+                'nextStep' => $visit->workflowMessage(),
+            ],
+            'procedure' => [
+                'procedureNumber' => $procedureRecord->procedure_number,
+                'name' => $procedureRecord->serviceCatalogItem->name,
+            ],
+            'doctor' => ['name' => $procedureRecord->doctor->name],
+        ];
+    }
+
     /**
-     * @param  LengthAwarePaginator<int, ProcedureRecord>  $paginator
-     * @return array{currentPage: int, from: int|null, lastPage: int, perPage: int, to: int|null, total: int}
+     * @template TItem
+     *
+     * @param  LengthAwarePaginator<int, TItem>  $paginator
+     * @return array{currentPage: int, from: int|null, lastPage: int, pageName: string, perPage: int, to: int|null, total: int}
      */
     private function paginationData(LengthAwarePaginator $paginator): array
     {
@@ -169,6 +250,7 @@ class RecoveryEpisodeController extends Controller
             'currentPage' => $paginator->currentPage(),
             'from' => $paginator->firstItem(),
             'lastPage' => $paginator->lastPage(),
+            'pageName' => $paginator->getPageName(),
             'perPage' => $paginator->perPage(),
             'to' => $paginator->lastItem(),
             'total' => $paginator->total(),

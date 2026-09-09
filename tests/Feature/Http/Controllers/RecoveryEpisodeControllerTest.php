@@ -29,21 +29,19 @@ it('shows completed procedures without recovery oldest first in the Nurse queue'
         ->get(route('nursing.recovery.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('nursing/recovery/index')
-            ->where('procedures.data', fn ($items): bool => collect($items)
+            ->where('awaitingRecoveries.data', fn ($items): bool => collect($items)
                 ->pluck('id')->all() === [$oldest->id, $newer->id])
-            ->where('procedures.data.0.visit.nextStep', 'Ready for Nursing recovery')
-            ->where('procedures.data.0.patient.patientNumber', $oldest->visit->patient->patient_number)
-            ->where('procedures.data.0.procedure.name', $oldest->serviceCatalogItem->name)
-            ->where('procedures.data.0.doctor.name', $oldest->doctor->name)
-            ->where('procedures.pagination.total', 2)
-            ->missing('procedures.data.0.findings')
-            ->missing('procedures.data.0.outcome')
-            ->missing('procedures.data.0.bill')
-            ->missing('procedures.data.0.payment')
-            ->missing('procedures.data.0.receipt')
-            ->missing('procedures.data.0.financialClearance')
-            ->missing('procedures.data.0.price')
-            ->missing('procedures.data.0.doctor.email'));
+            ->where('awaitingRecoveries.data.0.visit.nextStep', 'Ready for Nursing recovery')
+            ->where('awaitingRecoveries.data.0.patient.patientNumber', $oldest->visit->patient->patient_number)
+            ->where('awaitingRecoveries.data.0.procedure.name', $oldest->serviceCatalogItem->name)
+            ->where('awaitingRecoveries.data.0.doctor.name', $oldest->doctor->name)
+            ->where('awaitingRecoveries.pagination.total', 2)
+            ->where('awaitingRecoveries.pagination.pageName', 'awaiting_page')
+            ->where('activeRecoveries.data.0.id', $alreadyStarted->recoveryEpisode->id)
+            ->where('activeRecoveries.pagination.pageName', 'active_page')
+            ->missing('awaitingRecoveries.data.0.findings')
+            ->missing('awaitingRecoveries.data.0.bill')
+            ->missing('awaitingRecoveries.data.0.payment'));
 });
 
 it('paginates the recovery queue at fifteen completed procedures', function () {
@@ -59,17 +57,51 @@ it('paginates the recovery queue at fifteen completed procedures', function () {
     $this->actingAs($nurse)
         ->get(route('nursing.recovery.index'))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('procedures.data', 15)
-            ->where('procedures.pagination.currentPage', 1)
-            ->where('procedures.pagination.perPage', 15)
-            ->where('procedures.pagination.lastPage', 2)
-            ->where('procedures.pagination.total', 16));
+            ->has('awaitingRecoveries.data', 15)
+            ->where('awaitingRecoveries.pagination.currentPage', 1)
+            ->where('awaitingRecoveries.pagination.perPage', 15)
+            ->where('awaitingRecoveries.pagination.lastPage', 2)
+            ->where('awaitingRecoveries.pagination.total', 16));
 
     $this->actingAs($nurse)
-        ->get(route('nursing.recovery.index', ['page' => 2]))
+        ->get(route('nursing.recovery.index', ['awaiting_page' => 2]))
         ->assertInertia(fn (Assert $page) => $page
-            ->has('procedures.data', 1)
-            ->where('procedures.pagination.currentPage', 2));
+            ->has('awaitingRecoveries.data', 1)
+            ->where('awaitingRecoveries.pagination.currentPage', 2));
+});
+
+it('shows only the responsible Nurse active recoveries oldest first with independent pagination', function () {
+    $nurse = User::factory()->forRole(StaffRole::Nurse)->create();
+    $otherNurse = User::factory()->forRole(StaffRole::Nurse)->create();
+    $ownedRecoveries = collect();
+
+    foreach (range(1, 16) as $minute) {
+        $this->travelTo(sprintf('2026-09-09 12:%02d:00', $minute));
+        $ownedRecoveries->push(app(StartRecoveryEpisode::class)->handle(
+            $nurse,
+            recoveryControllerCompletedProcedure(),
+        ));
+    }
+
+    app(StartRecoveryEpisode::class)->handle($otherNurse, recoveryControllerCompletedProcedure());
+    $this->travelBack();
+
+    $this->actingAs($nurse)
+        ->get(route('nursing.recovery.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('activeRecoveries.data', 15)
+            ->where('activeRecoveries.data.0.id', $ownedRecoveries->first()->id)
+            ->where('activeRecoveries.pagination.currentPage', 1)
+            ->where('activeRecoveries.pagination.pageName', 'active_page')
+            ->where('activeRecoveries.pagination.total', 16)
+            ->where('awaitingRecoveries.pagination.pageName', 'awaiting_page'));
+
+    $this->actingAs($nurse)
+        ->get(route('nursing.recovery.index', ['active_page' => 2]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('activeRecoveries.data', 1)
+            ->where('activeRecoveries.data.0.id', $ownedRecoveries->last()->id)
+            ->where('activeRecoveries.pagination.currentPage', 2));
 });
 
 it('shows a confirmation context and explicitly starts recovery', function () {
@@ -106,7 +138,7 @@ it('shows a confirmation context and explicitly starts recovery', function () {
             ->where('recovery.doctor.name', $procedureRecord->doctor->name)
             ->where('recovery.patient.patientNumber', $procedureRecord->visit->patient->patient_number)
             ->where('recovery.visit.nextStep', 'Recovery in progress')
-            ->missing('recovery.observations')
+            ->has('recovery.observations', 0)
             ->missing('recovery.findings')
             ->missing('recovery.bill')
             ->missing('recovery.payment')
