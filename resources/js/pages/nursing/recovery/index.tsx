@@ -42,8 +42,8 @@ export default function RecoveryIndex({
                             My active recoveries
                         </h2>
                         <p className="mt-1 text-sm text-text-secondary">
-                            In-progress episodes for which you are the
-                            responsible Nurse.
+                            Episodes requiring your monitoring, readiness, or
+                            final discharge action.
                         </p>
                     </div>
                     {activeRecoveries.data.length === 0 ? (
@@ -116,7 +116,11 @@ export default function RecoveryIndex({
                                                         item.visit.nextStep ===
                                                         'Doctor review required'
                                                             ? 'warning'
-                                                            : 'info'
+                                                            : item.visit
+                                                                    .nextStep ===
+                                                                'Ready for discharge'
+                                                              ? 'success'
+                                                              : 'info'
                                                     }
                                                 >
                                                     {item.visit.nextStep}

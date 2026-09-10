@@ -1,8 +1,10 @@
 <?php
 
+use App\Actions\Nursing\AssessRecoveryReadiness;
 use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureDecision;
 use App\Models\ProcedureRecord;
+use App\Models\RecoveryDischarge;
 use App\Models\RecoveryEpisode;
 use App\Models\User;
 use App\StaffPermission;
@@ -43,11 +45,33 @@ it('allows only the responsible Nurse to manage an in-progress recovery episode'
         ->and(Gate::forUser($doctor)->denies('update', $recoveryEpisode))->toBeTrue();
 });
 
+it('allows only the responsible active Nurse to discharge an uncomplicated ready recovery', function () {
+    $responsibleNurse = User::factory()->forRole(StaffRole::Nurse)->create();
+    $otherNurse = User::factory()->forRole(StaffRole::Nurse)->create();
+    $doctor = User::factory()->forRole(StaffRole::Doctor)->create();
+    $recoveryEpisode = recoveryEpisodePolicyFixture($responsibleNurse);
+    app(AssessRecoveryReadiness::class)->handle($responsibleNurse, $recoveryEpisode, [
+        'criteria_met' => true,
+        'clinical_concern_requires_escalation' => false,
+    ]);
+    $recoveryEpisode->refresh();
+
+    expect(Gate::forUser($responsibleNurse)->allows('discharge', $recoveryEpisode))->toBeTrue()
+        ->and(Gate::forUser($otherNurse)->denies('discharge', $recoveryEpisode))->toBeTrue()
+        ->and(Gate::forUser($doctor)->denies('discharge', $recoveryEpisode))->toBeTrue();
+});
+
 it('denies completed-record management and inactive clinical users', function () {
     $nurse = User::factory()->forRole(StaffRole::Nurse)->create();
     $inactiveNurse = User::factory()->forRole(StaffRole::Nurse)->inactive()->create();
     $inactiveDoctor = User::factory()->forRole(StaffRole::Doctor)->inactive()->create();
-    $recoveryEpisode = recoveryEpisodePolicyFixture($nurse, completed: true);
+    $recoveryEpisode = recoveryEpisodePolicyFixture($nurse);
+    app(AssessRecoveryReadiness::class)->handle($nurse, $recoveryEpisode, [
+        'criteria_met' => true,
+        'clinical_concern_requires_escalation' => false,
+    ]);
+    RecoveryDischarge::factory()->createAuthoritativeDischargeFixture($recoveryEpisode->refresh(), $nurse);
+    $recoveryEpisode->refresh();
 
     expect(Gate::forUser($nurse)->denies('update', $recoveryEpisode))->toBeTrue()
         ->and(Gate::forUser($inactiveNurse)->denies(StaffPermission::RecoveryView))->toBeTrue()
@@ -55,7 +79,7 @@ it('denies completed-record management and inactive clinical users', function ()
         ->and(Gate::forUser($inactiveDoctor)->denies(StaffPermission::RecoveryView))->toBeTrue();
 });
 
-function recoveryEpisodePolicyFixture(User $nurse, bool $completed = false): RecoveryEpisode
+function recoveryEpisodePolicyFixture(User $nurse): RecoveryEpisode
 {
     $decision = ProcedureDecision::factory()->procedureRequired()->createAuthoritativeDecisionFixture();
     $preparationNurse = User::factory()->forRole(StaffRole::Nurse)->create();
@@ -65,11 +89,6 @@ function recoveryEpisodePolicyFixture(User $nurse, bool $completed = false): Rec
     $procedureRecord = ProcedureRecord::factory()
         ->completed()
         ->createAuthoritativeProcedureFixture($decision, $readiness);
-    $factory = RecoveryEpisode::factory();
 
-    if ($completed) {
-        $factory = $factory->completed();
-    }
-
-    return $factory->createAuthoritativeRecoveryFixture($procedureRecord, $nurse);
+    return RecoveryEpisode::factory()->createAuthoritativeRecoveryFixture($procedureRecord, $nurse);
 }

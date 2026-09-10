@@ -3,6 +3,7 @@
 use App\Actions\Audit\RecordAuditLog;
 use App\Actions\Clinical\ResolveRecoveryEscalation;
 use App\Actions\Nursing\AssessRecoveryReadiness;
+use App\Actions\Nursing\DischargeRecovery;
 use App\AuditAction;
 use App\Models\Appointment;
 use App\Models\AuditLog;
@@ -238,6 +239,46 @@ it('tracks Doctor recovery escalation resolution as role-scoped Patient activity
                 'type' => 'recovery',
                 'id' => $context['recovery']->id,
             ]));
+});
+
+it('tracks Nurse discharge attribution and final stage without exposing discharge narratives', function () {
+    $doctor = User::factory()->forRole(StaffRole::Doctor)->create();
+    $nurse = User::factory()->forRole(StaffRole::Nurse)->create();
+    $receptionist = User::factory()->forRole(StaffRole::Receptionist)->create();
+    $context = patientActivityDownstreamContext($doctor, $nurse, $receptionist);
+    app(AssessRecoveryReadiness::class)->handle($nurse, $context['recovery'], [
+        'criteria_met' => true,
+        'clinical_concern_requires_escalation' => false,
+    ]);
+    $discharge = app(DischargeRecovery::class)->handle($nurse, $context['recovery']->refresh(), [
+        'condition_summary' => 'Sensitive discharge condition.',
+        'accompaniment_status' => 'accompanied',
+        'disposition' => 'home',
+        'nursing_note' => 'Sensitive Nursing discharge note.',
+        'general_care_instructions' => 'Sensitive general care instructions.',
+        'activity_driving_instructions' => 'Sensitive activity instructions.',
+        'diet_fluids_instructions' => 'Sensitive diet instructions.',
+        'medication_instructions' => 'Sensitive medication instructions.',
+        'warning_signs_instructions' => 'Sensitive warning signs.',
+        'follow_up_instructions' => 'Sensitive follow-up instructions.',
+        'confirm_discharge' => true,
+    ]);
+
+    $this->actingAs($nurse)
+        ->get(route('patient-activity.index', ['activity' => 'recovery']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('activities.data', 1)
+            ->where('activities.data.0.visit.currentStage', 'Discharged')
+            ->where('activities.data.0.activity.label', 'Patient discharged from recovery')
+            ->where('activities.data.0.activity.reference', $discharge->discharge_number)
+            ->where('activities.data.0.destination', [
+                'type' => 'recovery',
+                'id' => $context['recovery']->id,
+            ])
+            ->missing('activities.data.0.conditionSummary')
+            ->missing('activities.data.0.nursingNote')
+            ->missing('activities.data.0.instructions')
+            ->missing('activities.data.0.audit'));
 });
 
 it('searches filters and independently paginates attributed activity newest first', function () {

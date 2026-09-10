@@ -12,6 +12,7 @@ use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureDecision;
 use App\Models\ProcedureRecord;
 use App\Models\Receipt;
+use App\Models\RecoveryDischarge;
 use App\Models\RecoveryEpisode;
 use App\Models\RecoveryEscalation;
 use App\Models\RecoveryObservation;
@@ -288,6 +289,7 @@ class ListPatientActivity
             $this->recoveryObservationEvent($actor),
             $this->recoveryReadinessEvent($actor),
             $this->recoveryEscalationEvent($actor, AuditAction::RecoveryEscalated),
+            $this->recoveryDischargeEvent($actor),
         ];
     }
 
@@ -579,6 +581,26 @@ class ListPatientActivity
             ->selectRaw('? as activity_type, ? as activity_label, ? as destination_type', [
                 'recovery',
                 $action->displayName(),
+                'recovery',
+            ]);
+    }
+
+    private function recoveryDischargeEvent(User $actor): Builder
+    {
+        return $this->eventBase($actor, AuditAction::RecoveryDischarged, RecoveryDischarge::class)
+            ->join('recovery_discharges', 'recovery_discharges.id', '=', 'audit_logs.subject_id')
+            ->join('recovery_episodes', 'recovery_episodes.id', '=', 'recovery_discharges.recovery_episode_id')
+            ->join('visits', 'visits.id', '=', 'recovery_episodes.visit_id')
+            ->select([
+                'audit_logs.id as event_id',
+                'visits.id as visit_id',
+                'audit_logs.created_at as activity_at',
+                'recovery_discharges.discharge_number as activity_reference',
+                'recovery_episodes.id as destination_id',
+            ])
+            ->selectRaw('? as activity_type, ? as activity_label, ? as destination_type', [
+                'recovery',
+                AuditAction::RecoveryDischarged->displayName(),
                 'recovery',
             ]);
     }

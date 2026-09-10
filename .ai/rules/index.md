@@ -12,6 +12,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | database/migrations/*_create_visits_table.php | .ai/rules/migrations.md |
 | app/{Models,Actions,Policies}/**/*.php | .ai/rules/models-actions-policies.md |
 | app/Models/{Patient,Visit}.php | .ai/rules/models.md |
+| app/{Actions/Nursing,Models,Policies,Http/Controllers,Http/Requests}/**/*.php | .ai/rules/nursing-models-policies-http-controllers-http-requests.md |
 | app/{Actions/Nursing,Models,Policies,Http/Controllers}/**/*.php | .ai/rules/nursing-models-policies-http-controllers.md |
 | app/Actions/PatientActivity/** | .ai/rules/patient-activity.md |
 | app/{Actions/Procedures,Models,Policies,Http/Controllers}/** | .ai/rules/procedures-models-policies-http-controllers.md |

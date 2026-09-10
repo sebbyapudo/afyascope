@@ -13,7 +13,7 @@ enum RecoveryEpisodeStatus: string
         return match ($this) {
             self::InProgress => 'In progress',
             self::ReadyForDischarge => 'Ready for discharge',
-            self::Completed => 'Completed',
+            self::Completed => 'Discharged',
         };
     }
 }

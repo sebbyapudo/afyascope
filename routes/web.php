@@ -23,6 +23,7 @@ use App\Http\Controllers\ProcedureBillingController;
 use App\Http\Controllers\ProcedureDecisionController;
 use App\Http\Controllers\ProcedureRecordController;
 use App\Http\Controllers\ReceiptController;
+use App\Http\Controllers\RecoveryDischargeController;
 use App\Http\Controllers\RecoveryEpisodeController;
 use App\Http\Controllers\RecoveryEscalationController;
 use App\Http\Controllers\RecoveryObservationController;
@@ -107,6 +108,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/nursing/recovery/{recoveryEpisode}/readiness', RecoveryReadinessAssessmentController::class)
         ->can('assessReadiness', 'recoveryEpisode')
         ->name('nursing.recovery.readiness.store');
+    Route::post('/nursing/recovery/{recoveryEpisode}/discharge', RecoveryDischargeController::class)
+        ->can('discharge', 'recoveryEpisode')
+        ->name('nursing.recovery.discharge.store');
 
     Route::get('/clinical/recovery-escalations', [RecoveryEscalationController::class, 'index'])
         ->can('viewAny', RecoveryEscalation::class)

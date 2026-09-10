@@ -1,6 +1,7 @@
 <?php
 
 use App\Actions\Audit\RecordAuditLog;
+use App\Actions\Nursing\AssessRecoveryReadiness;
 use App\Actions\Nursing\RecordRecoveryObservation;
 use App\Actions\Nursing\StartRecoveryEpisode;
 use App\AuditAction;
@@ -8,6 +9,7 @@ use App\Models\AuditLog;
 use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureDecision;
 use App\Models\ProcedureRecord;
+use App\Models\RecoveryDischarge;
 use App\Models\RecoveryEpisode;
 use App\Models\RecoveryObservation;
 use App\Models\User;
@@ -88,9 +90,13 @@ it('rejects invalid forged context and rolls back if audit recording fails', fun
 it('rejects a stale non-active recovery episode', function () {
     $procedure = observationActionCompletedProcedure();
     $nurse = User::factory()->forRole(StaffRole::Nurse)->create();
-    $recovery = RecoveryEpisode::factory()
-        ->completed()
-        ->createAuthoritativeRecoveryFixture($procedure, $nurse);
+    $recovery = RecoveryEpisode::factory()->createAuthoritativeRecoveryFixture($procedure, $nurse);
+    app(AssessRecoveryReadiness::class)->handle($nurse, $recovery, [
+        'criteria_met' => true,
+        'clinical_concern_requires_escalation' => false,
+    ]);
+    RecoveryDischarge::factory()->createAuthoritativeDischargeFixture($recovery->refresh(), $nurse);
+    $recovery->refresh();
 
     expect(fn () => app(RecordRecoveryObservation::class)->handle($nurse, $recovery, observationAttributes()))
         ->toThrow(AuthorizationException::class);

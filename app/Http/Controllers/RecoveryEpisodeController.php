@@ -37,7 +37,10 @@ class RecoveryEpisodeController extends Controller
 
         $activeRecoveries = RecoveryEpisode::query()
             ->where('nurse_user_id', $actor->getKey())
-            ->where('status', RecoveryEpisodeStatus::InProgress)
+            ->whereIn('status', [
+                RecoveryEpisodeStatus::InProgress->value,
+                RecoveryEpisodeStatus::ReadyForDischarge->value,
+            ])
             ->with([
                 'procedureRecord:id,visit_id,service_catalog_item_id,doctor_user_id,procedure_number,status,completed_at',
                 'procedureRecord.doctor:id,name',
@@ -125,6 +128,8 @@ class RecoveryEpisodeController extends Controller
             'escalations.escalatedBy:id,name',
             'escalations.resolvedBy:id,name',
             'openEscalation:id,recovery_episode_id,status,open_marker',
+            'discharge',
+            'discharge.dischargedBy:id,name',
         ]);
 
         $visit = $recoveryEpisode->visit;
@@ -144,6 +149,7 @@ class RecoveryEpisodeController extends Controller
                 'canManage' => $request->user()?->can('update', $recoveryEpisode) ?? false,
                 'isResponsibleNurse' => $request->user()?->getKey() === $recoveryEpisode->nurse_user_id,
                 'canAssessReadiness' => $request->user()?->can('assessReadiness', $recoveryEpisode) ?? false,
+                'canDischarge' => $request->user()?->can('discharge', $recoveryEpisode) ?? false,
                 'canResolveEscalation' => $recoveryEpisode->openEscalation instanceof RecoveryEscalation
                     && ($request->user()?->can('resolve', $recoveryEpisode->openEscalation) ?? false),
                 'nurse' => ['name' => $recoveryEpisode->nurse->name],
@@ -190,6 +196,27 @@ class RecoveryEpisodeController extends Controller
                             ? null
                             : ['name' => $escalation->resolvedBy->name],
                     ])->values(),
+                'discharge' => $recoveryEpisode->discharge === null ? null : [
+                    'dischargeNumber' => $recoveryEpisode->discharge->discharge_number,
+                    'conditionSummary' => $recoveryEpisode->discharge->condition_summary,
+                    'accompanimentStatus' => [
+                        'value' => $recoveryEpisode->discharge->accompaniment_status->value,
+                        'label' => $recoveryEpisode->discharge->accompaniment_status->displayName(),
+                    ],
+                    'disposition' => [
+                        'value' => $recoveryEpisode->discharge->disposition->value,
+                        'label' => $recoveryEpisode->discharge->disposition->displayName(),
+                    ],
+                    'nursingNote' => $recoveryEpisode->discharge->nursing_note,
+                    'generalCareInstructions' => $recoveryEpisode->discharge->general_care_instructions,
+                    'activityDrivingInstructions' => $recoveryEpisode->discharge->activity_driving_instructions,
+                    'dietFluidsInstructions' => $recoveryEpisode->discharge->diet_fluids_instructions,
+                    'medicationInstructions' => $recoveryEpisode->discharge->medication_instructions,
+                    'warningSignsInstructions' => $recoveryEpisode->discharge->warning_signs_instructions,
+                    'followUpInstructions' => $recoveryEpisode->discharge->follow_up_instructions,
+                    'dischargedAt' => $recoveryEpisode->discharge->discharged_at->toIso8601String(),
+                    'dischargedBy' => ['name' => $recoveryEpisode->discharge->dischargedBy->name],
+                ],
                 'observations' => $recoveryEpisode->observations
                     ->map(fn (RecoveryObservation $observation): array => [
                         'id' => $observation->id,

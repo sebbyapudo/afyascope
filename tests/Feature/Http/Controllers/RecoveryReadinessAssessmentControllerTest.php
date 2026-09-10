@@ -36,7 +36,7 @@ it('lets the responsible Nurse assess readiness and projects the current decisio
             ->where('recovery.readinessAssessment.assessedBy.name', $nurse->name)
             ->missing('recovery.readinessAssessment.assessedBy.id')
             ->missing('recovery.readinessAssessment.assessedBy.email')
-            ->missing('recovery.discharge')
+            ->where('recovery.discharge', null)
             ->missing('recovery.audit'));
 });
 
@@ -104,9 +104,9 @@ it('protects readiness writes from guests non-owners and all non-Nurse roles', f
         ->and($recovery->fresh()->nurse_user_id)->toBe($owner->id);
 });
 
-it('keeps readiness distinct from discharge routes and completed lifecycle', function () {
+it('keeps readiness distinct from discharge execution and completed lifecycle', function () {
     expect(Route::has('nursing.recovery.readiness.store'))->toBeTrue()
-        ->and(Route::has('nursing.recovery.discharge'))->toBeFalse()
+        ->and(Route::has('nursing.recovery.discharge.store'))->toBeTrue()
         ->and(Route::has('nursing.recovery.complete'))->toBeFalse()
         ->and(Route::has('discharges.store'))->toBeFalse();
 });
@@ -129,7 +129,9 @@ it('keeps active recovery queues and Patient workflow projections aligned with r
         ->get(route('nursing.recovery.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->where('activeRecoveries.data', fn ($items): bool => collect($items)
-                ->where('id', $readyRecovery->id)->isEmpty()));
+                ->where('id', $readyRecovery->id)
+                ->where('visit.nextStep', 'Ready for discharge')
+                ->isNotEmpty()));
 
     $this->actingAs($escalatedNurse)
         ->get(route('nursing.recovery.index'))

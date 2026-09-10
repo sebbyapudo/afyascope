@@ -75,6 +75,7 @@ export type RecoveryWorkspace = {
     canManage: boolean;
     isResponsibleNurse: boolean;
     canAssessReadiness: boolean;
+    canDischarge: boolean;
     canResolveEscalation: boolean;
     nurse: {
         name: string;
@@ -105,7 +106,30 @@ export type RecoveryWorkspace = {
         assessedBy: { name: string };
     } | null;
     escalations: RecoveryEscalation[];
+    discharge: RecoveryDischarge | null;
     observations: RecoveryObservation[];
+};
+
+export type RecoveryDischarge = {
+    dischargeNumber: string;
+    conditionSummary: string;
+    accompanimentStatus: {
+        value: 'accompanied' | 'not_accompanied' | 'not_applicable';
+        label: string;
+    };
+    disposition: {
+        value: 'home' | 'other_facility' | 'other';
+        label: string;
+    };
+    nursingNote: string | null;
+    generalCareInstructions: string;
+    activityDrivingInstructions: string;
+    dietFluidsInstructions: string;
+    medicationInstructions: string | null;
+    warningSignsInstructions: string;
+    followUpInstructions: string | null;
+    dischargedAt: string;
+    dischargedBy: { name: string };
 };
 
 export type RecoveryEscalation = {

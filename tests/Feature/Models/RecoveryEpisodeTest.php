@@ -59,7 +59,7 @@ it('generates immutable sequential references from database identifiers', functi
     $second->recovery_number = 'REC-FORGED';
 
     expect(fn () => $second->save())
-        ->toThrow(LogicException::class, 'future Nursing workflow');
+        ->toThrow(LogicException::class, 'owning Nursing workflow');
 });
 
 it('rejects direct creation and arbitrary lifecycle context or timestamp changes', function () {
@@ -85,13 +85,13 @@ it('rejects direct creation and arbitrary lifecycle context or timestamp changes
     $recoveryEpisode->completed_at = now();
 
     expect(fn () => $recoveryEpisode->save())
-        ->toThrow(LogicException::class, 'future Nursing workflow');
+        ->toThrow(LogicException::class, 'owning Nursing workflow');
 
     $recoveryEpisode = $recoveryEpisode->fresh();
     $recoveryEpisode->started_at = $recoveryEpisode->started_at->subHour();
 
     expect(fn () => $recoveryEpisode->save())
-        ->toThrow(LogicException::class, 'future Nursing workflow');
+        ->toThrow(LogicException::class, 'owning Nursing workflow');
 });
 
 it('enforces one recovery episode per Visit and Procedure Record at the database boundary', function () {

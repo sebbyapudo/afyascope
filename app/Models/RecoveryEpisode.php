@@ -34,6 +34,7 @@ use LogicException;
  * @property-read RecoveryReadinessAssessment|null $readinessAssessment
  * @property-read Collection<int, RecoveryEscalation> $escalations
  * @property-read RecoveryEscalation|null $openEscalation
+ * @property-read RecoveryDischarge|null $discharge
  */
 class RecoveryEpisode extends Model
 {
@@ -43,6 +44,8 @@ class RecoveryEpisode extends Model
     private static bool $startingFromNursingWorkflow = false;
 
     private static bool $updatingFromReadinessWorkflow = false;
+
+    private static bool $completingFromDischargeWorkflow = false;
 
     /** @var array<string, mixed> */
     protected $attributes = [
@@ -92,6 +95,12 @@ class RecoveryEpisode extends Model
             ->where('open_marker', true);
     }
 
+    /** @return HasOne<RecoveryDischarge, $this> */
+    public function discharge(): HasOne
+    {
+        return $this->hasOne(RecoveryDischarge::class);
+    }
+
     public function markReadyForDischargeFromNursingWorkflow(User $nurse): void
     {
         if (! $this->exists
@@ -112,8 +121,36 @@ class RecoveryEpisode extends Model
         }
     }
 
+    public function completeFromDischargeWorkflow(User $nurse, RecoveryDischarge $discharge): void
+    {
+        if (! $this->exists
+            || $this->status !== RecoveryEpisodeStatus::ReadyForDischarge
+            || $this->nurse_user_id !== $nurse->getKey()
+            || ! $nurse->is_active
+            || $nurse->role?->slug !== StaffRole::Nurse->value
+            || ! $discharge->exists
+            || $discharge->recovery_episode_id !== $this->getKey()
+            || $discharge->discharged_by_user_id !== $nurse->getKey()) {
+            throw new LogicException('Recovery completion requires its finalized Nurse-owned discharge record.');
+        }
+
+        self::$completingFromDischargeWorkflow = true;
+
+        try {
+            $this->status = RecoveryEpisodeStatus::Completed;
+            $this->completed_at = $discharge->discharged_at;
+            $this->save();
+        } finally {
+            self::$completingFromDischargeWorkflow = false;
+        }
+    }
+
     public function workflowMessage(): string
     {
+        if ($this->status === RecoveryEpisodeStatus::Completed) {
+            return 'Discharged';
+        }
+
         if ($this->status === RecoveryEpisodeStatus::ReadyForDischarge) {
             return 'Ready for discharge';
         }
@@ -184,9 +221,15 @@ class RecoveryEpisode extends Model
                 && $recoveryEpisode->status === RecoveryEpisodeStatus::ReadyForDischarge
                 && $recoveryEpisode->getDirty() === ['status' => RecoveryEpisodeStatus::ReadyForDischarge->value];
 
-            if (! $isReadinessTransition) {
+            $isDischargeTransition = self::$completingFromDischargeWorkflow
+                && $recoveryEpisode->getRawOriginal('status') === RecoveryEpisodeStatus::ReadyForDischarge->value
+                && $recoveryEpisode->status === RecoveryEpisodeStatus::Completed
+                && $recoveryEpisode->completed_at !== null
+                && array_keys($recoveryEpisode->getDirty()) === ['status', 'completed_at'];
+
+            if (! $isReadinessTransition && ! $isDischargeTransition) {
                 throw new LogicException(
-                    'Recovery episode state and authoritative context require the future Nursing workflow.',
+                    'Recovery episode state and authoritative context require their owning Nursing workflow.',
                 );
             }
         });

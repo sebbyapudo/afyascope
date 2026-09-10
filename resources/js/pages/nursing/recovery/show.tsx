@@ -11,6 +11,7 @@ import { cn } from '@/lib/utils';
 import { show as procedureShow } from '@/routes/clinical/procedures';
 import { update as escalationUpdate } from '@/routes/clinical/recovery-escalations';
 import { index as recoveryIndex } from '@/routes/nursing/recovery';
+import { store as dischargeStore } from '@/routes/nursing/recovery/discharge';
 import { store as observationStore } from '@/routes/nursing/recovery/observations';
 import { store as readinessStore } from '@/routes/nursing/recovery/readiness';
 import type { RecoveryWorkspace } from '@/types';
@@ -74,14 +75,20 @@ export default function RecoveryShow({ recovery, status }: RecoveryShowProps) {
                                 Recovery context
                             </h2>
                             <p className="mt-1 text-sm text-text-secondary">
-                                {recovery.canManage
-                                    ? 'You are the responsible Nurse for this in-progress recovery episode.'
-                                    : `Read-only record owned by ${recovery.nurse.name}.`}
+                                {recovery.discharge
+                                    ? `Finalized by ${recovery.discharge.dischargedBy.name} on ${formatDateTime(recovery.discharge.dischargedAt)}.`
+                                    : recovery.canManage
+                                      ? 'You are the responsible Nurse for this in-progress recovery episode.'
+                                      : recovery.canDischarge
+                                        ? 'You are the responsible Nurse and this recovery is ready for discharge.'
+                                        : `Read-only record owned by ${recovery.nurse.name}.`}
                             </p>
                         </div>
                         <StatusBadge
                             tone={
-                                recovery.status.value === 'ready_for_discharge'
+                                recovery.status.value ===
+                                    'ready_for_discharge' ||
+                                recovery.status.value === 'completed'
                                     ? 'success'
                                     : openEscalation
                                       ? 'warning'
@@ -515,6 +522,368 @@ export default function RecoveryShow({ recovery, status }: RecoveryShowProps) {
                         </Form>
                     ) : null}
                 </Panel>
+
+                {recovery.discharge ? (
+                    <Panel className="p-5 sm:p-8 print:border-0 print:shadow-none">
+                        <div className="flex flex-wrap items-start justify-between gap-4 border-b border-border pb-5">
+                            <div>
+                                <h2 className="text-lg font-semibold text-text">
+                                    Finalized discharge summary
+                                </h2>
+                                <p className="mt-1 text-sm text-text-secondary">
+                                    {recovery.discharge.dischargeNumber} ·{' '}
+                                    {formatDateTime(
+                                        recovery.discharge.dischargedAt,
+                                    )}{' '}
+                                    by {recovery.discharge.dischargedBy.name}
+                                </p>
+                            </div>
+                            <StatusBadge tone="success">Discharged</StatusBadge>
+                        </div>
+
+                        <dl className="mt-6 grid gap-5 text-sm md:grid-cols-3">
+                            <div>
+                                <dt className="text-text-secondary">
+                                    Condition at discharge
+                                </dt>
+                                <dd className="mt-1 font-medium text-text">
+                                    {recovery.discharge.conditionSummary}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-text-secondary">
+                                    Accompaniment
+                                </dt>
+                                <dd className="mt-1 font-medium text-text">
+                                    {
+                                        recovery.discharge.accompanimentStatus
+                                            .label
+                                    }
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-text-secondary">
+                                    Disposition
+                                </dt>
+                                <dd className="mt-1 font-medium text-text">
+                                    {recovery.discharge.disposition.label}
+                                </dd>
+                            </div>
+                        </dl>
+
+                        {recovery.discharge.nursingNote ? (
+                            <div className="mt-6 rounded-control border border-border bg-surface-subtle p-4">
+                                <h3 className="text-sm font-semibold text-text">
+                                    Nursing discharge note
+                                </h3>
+                                <p className="mt-2 text-sm leading-6 whitespace-pre-wrap text-text-secondary">
+                                    {recovery.discharge.nursingNote}
+                                </p>
+                            </div>
+                        ) : null}
+
+                        <div className="mt-6 border-t border-border pt-6">
+                            <h3 className="font-semibold text-text">
+                                Instructions communicated
+                            </h3>
+                            <dl className="mt-4 grid gap-5 md:grid-cols-2">
+                                {[
+                                    [
+                                        'General post-procedure care',
+                                        recovery.discharge
+                                            .generalCareInstructions,
+                                    ],
+                                    [
+                                        'Activity and driving restrictions',
+                                        recovery.discharge
+                                            .activityDrivingInstructions,
+                                    ],
+                                    [
+                                        'Diet and fluids',
+                                        recovery.discharge
+                                            .dietFluidsInstructions,
+                                    ],
+                                    [
+                                        'Medication-related guidance',
+                                        recovery.discharge
+                                            .medicationInstructions ??
+                                            'Not applicable or none documented.',
+                                    ],
+                                    [
+                                        'Warning signs and urgent care',
+                                        recovery.discharge
+                                            .warningSignsInstructions,
+                                    ],
+                                    [
+                                        'Follow-up',
+                                        recovery.discharge
+                                            .followUpInstructions ??
+                                            'Not applicable or none documented.',
+                                    ],
+                                ].map(([label, value]) => (
+                                    <div
+                                        className="rounded-control border border-border bg-surface-subtle p-4"
+                                        key={label}
+                                    >
+                                        <dt className="text-sm font-semibold text-text">
+                                            {label}
+                                        </dt>
+                                        <dd className="mt-2 text-sm leading-6 whitespace-pre-wrap text-text-secondary">
+                                            {value}
+                                        </dd>
+                                    </div>
+                                ))}
+                            </dl>
+                        </div>
+                    </Panel>
+                ) : recovery.canDischarge ? (
+                    <Panel className="border-success-border p-5 sm:p-8">
+                        <div className="border-b border-border pb-5">
+                            <h2 className="text-lg font-semibold text-text">
+                                Document and confirm discharge
+                            </h2>
+                            <p className="mt-1 max-w-3xl text-sm leading-6 text-text-secondary">
+                                Review the ready state, record what was
+                                communicated, then explicitly confirm the final
+                                Nursing discharge. This action cannot be edited
+                                or undone.
+                            </p>
+                        </div>
+
+                        <Form
+                            {...dischargeStore.form(recovery.id)}
+                            className="mt-6 grid gap-6"
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    {errors.recovery || errors.actor ? (
+                                        <p
+                                            className="rounded-control border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
+                                            role="alert"
+                                        >
+                                            {errors.recovery ?? errors.actor}
+                                        </p>
+                                    ) : null}
+
+                                    <div className="grid gap-5 md:grid-cols-2">
+                                        <FormField
+                                            error={errors.condition_summary}
+                                            hint="Concise clinical status at the point of discharge."
+                                            id="discharge-condition-summary"
+                                            label="Condition at discharge"
+                                            required
+                                        >
+                                            <input
+                                                aria-invalid={Boolean(
+                                                    errors.condition_summary,
+                                                )}
+                                                className={formControlStyles}
+                                                id="discharge-condition-summary"
+                                                maxLength={255}
+                                                name="condition_summary"
+                                                required
+                                            />
+                                        </FormField>
+                                        <FormField
+                                            error={errors.accompaniment_status}
+                                            id="discharge-accompaniment"
+                                            label="Accompaniment status"
+                                            required
+                                        >
+                                            <select
+                                                aria-invalid={Boolean(
+                                                    errors.accompaniment_status,
+                                                )}
+                                                className={formControlStyles}
+                                                defaultValue=""
+                                                id="discharge-accompaniment"
+                                                name="accompaniment_status"
+                                                required
+                                            >
+                                                <option disabled value="">
+                                                    Select accompaniment
+                                                </option>
+                                                <option value="accompanied">
+                                                    Accompanied
+                                                </option>
+                                                <option value="not_accompanied">
+                                                    Not accompanied
+                                                </option>
+                                                <option value="not_applicable">
+                                                    Not applicable
+                                                </option>
+                                            </select>
+                                        </FormField>
+                                        <FormField
+                                            error={errors.disposition}
+                                            id="discharge-disposition"
+                                            label="Discharge disposition"
+                                            required
+                                        >
+                                            <select
+                                                aria-invalid={Boolean(
+                                                    errors.disposition,
+                                                )}
+                                                className={formControlStyles}
+                                                defaultValue=""
+                                                id="discharge-disposition"
+                                                name="disposition"
+                                                required
+                                            >
+                                                <option disabled value="">
+                                                    Select disposition
+                                                </option>
+                                                <option value="home">
+                                                    Home
+                                                </option>
+                                                <option value="other_facility">
+                                                    Other care facility
+                                                </option>
+                                                <option value="other">
+                                                    Other destination
+                                                </option>
+                                            </select>
+                                        </FormField>
+                                        <FormField
+                                            error={errors.nursing_note}
+                                            hint="Optional concise Nursing discharge note."
+                                            id="discharge-nursing-note"
+                                            label="Nursing discharge note"
+                                        >
+                                            <textarea
+                                                aria-invalid={Boolean(
+                                                    errors.nursing_note,
+                                                )}
+                                                className={cn(
+                                                    formControlStyles,
+                                                    'min-h-24 resize-y py-3',
+                                                )}
+                                                id="discharge-nursing-note"
+                                                maxLength={2000}
+                                                name="nursing_note"
+                                                rows={3}
+                                            />
+                                        </FormField>
+                                    </div>
+
+                                    <fieldset className="grid gap-5 border-t border-border pt-6 md:grid-cols-2">
+                                        <legend className="mb-1 text-sm font-semibold text-text md:col-span-2">
+                                            Instructions communicated to the
+                                            patient
+                                        </legend>
+                                        {[
+                                            [
+                                                'general-care-instructions',
+                                                'general_care_instructions',
+                                                'General post-procedure care',
+                                                true,
+                                            ],
+                                            [
+                                                'activity-driving-instructions',
+                                                'activity_driving_instructions',
+                                                'Activity and driving restrictions',
+                                                true,
+                                            ],
+                                            [
+                                                'diet-fluids-instructions',
+                                                'diet_fluids_instructions',
+                                                'Diet and fluids guidance',
+                                                true,
+                                            ],
+                                            [
+                                                'medication-instructions',
+                                                'medication_instructions',
+                                                'Medication-related instructions',
+                                                false,
+                                            ],
+                                            [
+                                                'warning-signs-instructions',
+                                                'warning_signs_instructions',
+                                                'Warning signs and when to seek care',
+                                                true,
+                                            ],
+                                            [
+                                                'follow-up-instructions',
+                                                'follow_up_instructions',
+                                                'Follow-up instructions',
+                                                false,
+                                            ],
+                                        ].map(([id, name, label, required]) => (
+                                            <FormField
+                                                error={errors[String(name)]}
+                                                hint={
+                                                    required
+                                                        ? 'Document the instructions actually communicated.'
+                                                        : 'Optional where applicable.'
+                                                }
+                                                id={String(id)}
+                                                key={String(name)}
+                                                label={String(label)}
+                                                required={Boolean(required)}
+                                            >
+                                                <textarea
+                                                    aria-invalid={Boolean(
+                                                        errors[String(name)],
+                                                    )}
+                                                    className={cn(
+                                                        formControlStyles,
+                                                        'min-h-28 resize-y py-3',
+                                                    )}
+                                                    id={String(id)}
+                                                    maxLength={5000}
+                                                    name={String(name)}
+                                                    required={Boolean(required)}
+                                                    rows={4}
+                                                />
+                                            </FormField>
+                                        ))}
+                                    </fieldset>
+
+                                    <label className="flex items-start gap-3 rounded-control border border-warning-border bg-warning-soft p-4 focus-within:border-brand-primary">
+                                        <input
+                                            className="mt-0.5 size-4 accent-brand-primary"
+                                            name="confirm_discharge"
+                                            required
+                                            type="checkbox"
+                                            value="1"
+                                        />
+                                        <span>
+                                            <span className="block text-sm font-semibold text-text">
+                                                I confirm the patient is ready
+                                                and I am finalizing discharge
+                                            </span>
+                                            <span className="mt-1 block text-xs leading-5 text-text-secondary">
+                                                The finalized record is
+                                                read-only. Formal amendments are
+                                                deferred rather than silently
+                                                overwriting clinical history.
+                                            </span>
+                                            {errors.confirm_discharge ? (
+                                                <span
+                                                    className="mt-2 block text-sm text-danger"
+                                                    role="alert"
+                                                >
+                                                    {errors.confirm_discharge}
+                                                </span>
+                                            ) : null}
+                                        </span>
+                                    </label>
+
+                                    <div>
+                                        <Button
+                                            disabled={processing}
+                                            type="submit"
+                                        >
+                                            {processing
+                                                ? 'Finalizing discharge…'
+                                                : 'Confirm and discharge'}
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </Form>
+                    </Panel>
+                ) : null}
 
                 {recovery.escalations.length > 0 ? (
                     <Panel className="overflow-hidden">

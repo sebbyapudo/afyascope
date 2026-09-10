@@ -279,7 +279,7 @@ it('logs out an inactive Nurse before any recovery route can change state', func
     expect(RecoveryEpisode::query()->count())->toBe(0);
 });
 
-it('exposes no recovery completion update discharge or deletion routes', function () {
+it('exposes only the authorized discharge action with no generic completion update or deletion route', function () {
     expect(Route::has('nursing.recovery.index'))->toBeTrue()
         ->and(Route::has('nursing.recovery.create'))->toBeTrue()
         ->and(Route::has('nursing.recovery.store'))->toBeTrue()
@@ -287,7 +287,9 @@ it('exposes no recovery completion update discharge or deletion routes', functio
         ->and(Route::has('nursing.recovery.update'))->toBeFalse()
         ->and(Route::has('nursing.recovery.complete'))->toBeFalse()
         ->and(Route::has('nursing.recovery.destroy'))->toBeFalse()
-        ->and(Route::has('nursing.recovery.discharge'))->toBeFalse();
+        ->and(Route::has('nursing.recovery.discharge.store'))->toBeTrue()
+        ->and(Route::has('nursing.recovery.discharge.update'))->toBeFalse()
+        ->and(Route::has('nursing.recovery.discharge.destroy'))->toBeFalse();
 });
 
 function recoveryControllerCompletedProcedure(bool $completed = true): ProcedureRecord

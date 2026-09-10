@@ -26,22 +26,6 @@ class RecoveryEpisodeFactory extends Factory
         return [];
     }
 
-    public function completed(): static
-    {
-        return $this->state(fn (): array => [
-            'status' => RecoveryEpisodeStatus::Completed,
-            'completed_at' => now(),
-        ]);
-    }
-
-    public function readyForDischarge(): static
-    {
-        return $this->state(fn (): array => [
-            'status' => RecoveryEpisodeStatus::ReadyForDischarge,
-            'completed_at' => null,
-        ]);
-    }
-
     public function createAuthoritativeRecoveryFixture(
         ProcedureRecord $procedureRecord,
         User $nurse,
@@ -61,11 +45,9 @@ class RecoveryEpisodeFactory extends Factory
         $recoveryEpisode->procedureRecord()->associate($procedureRecord);
         $recoveryEpisode->nurse()->associate($nurse);
         $recoveryEpisode->recovery_number = 'TMP-'.Str::ulid();
-        $recoveryEpisode->status ??= RecoveryEpisodeStatus::InProgress;
+        $recoveryEpisode->status = RecoveryEpisodeStatus::InProgress;
         $recoveryEpisode->started_at = now();
-        $recoveryEpisode->completed_at = $recoveryEpisode->status === RecoveryEpisodeStatus::Completed
-            ? ($recoveryEpisode->completed_at ?? now())
-            : null;
+        $recoveryEpisode->completed_at = null;
         $recoveryEpisode->saveQuietly();
         $recoveryEpisode->recovery_number = sprintf('REC-%06d', $recoveryEpisode->id);
         $recoveryEpisode->saveQuietly();

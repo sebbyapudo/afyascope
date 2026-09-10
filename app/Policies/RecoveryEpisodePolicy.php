@@ -49,6 +49,14 @@ class RecoveryEpisodePolicy
             && ! $recoveryEpisode->openEscalation()->exists();
     }
 
+    public function discharge(User $user, RecoveryEpisode $recoveryEpisode): bool
+    {
+        return $user->hasPermission(StaffPermission::RecoveryManage)
+            && $recoveryEpisode->nurse_user_id === $user->id
+            && $recoveryEpisode->status === RecoveryEpisodeStatus::ReadyForDischarge
+            && ! $recoveryEpisode->openEscalation()->exists();
+    }
+
     /**
      * Determine whether the user can delete the model.
      */
