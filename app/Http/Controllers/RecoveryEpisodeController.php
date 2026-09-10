@@ -7,6 +7,7 @@ use App\Http\Requests\StoreRecoveryEpisodeRequest;
 use App\Models\Patient;
 use App\Models\ProcedureRecord;
 use App\Models\RecoveryEpisode;
+use App\Models\RecoveryEscalation;
 use App\Models\RecoveryObservation;
 use App\Models\User;
 use App\RecoveryEpisodeStatus;
@@ -47,6 +48,7 @@ class RecoveryEpisodeController extends Controller
                 'visit.procedureDecision:id,visit_id,outcome',
                 'visit.procedureRecord:id,visit_id,status',
                 'visit.recoveryEpisode:id,visit_id,status',
+                'visit.recoveryEpisode.openEscalation:id,recovery_episode_id,open_marker',
             ])
             ->orderBy('started_at')
             ->orderBy('id')
@@ -114,8 +116,15 @@ class RecoveryEpisodeController extends Controller
             'visit.procedureDecision:id,visit_id,outcome',
             'visit.procedureRecord:id,visit_id,status',
             'visit.recoveryEpisode:id,visit_id,status',
+            'visit.recoveryEpisode.openEscalation:id,recovery_episode_id,open_marker',
             'observations' => fn ($query) => $query->orderByDesc('recorded_at')->orderByDesc('id'),
             'observations.recordedBy:id,name',
+            'readinessAssessment:id,recovery_episode_id,assessed_by_user_id,criteria_met,clinical_concern_requires_escalation,assessment_note,assessed_at',
+            'readinessAssessment.assessedBy:id,name',
+            'escalations' => fn ($query) => $query->orderByDesc('escalated_at')->orderByDesc('id'),
+            'escalations.escalatedBy:id,name',
+            'escalations.resolvedBy:id,name',
+            'openEscalation:id,recovery_episode_id,status,open_marker',
         ]);
 
         $visit = $recoveryEpisode->visit;
@@ -133,6 +142,10 @@ class RecoveryEpisodeController extends Controller
                 'startedAt' => $recoveryEpisode->started_at->toIso8601String(),
                 'completedAt' => $recoveryEpisode->completed_at?->toIso8601String(),
                 'canManage' => $request->user()?->can('update', $recoveryEpisode) ?? false,
+                'isResponsibleNurse' => $request->user()?->getKey() === $recoveryEpisode->nurse_user_id,
+                'canAssessReadiness' => $request->user()?->can('assessReadiness', $recoveryEpisode) ?? false,
+                'canResolveEscalation' => $recoveryEpisode->openEscalation instanceof RecoveryEscalation
+                    && ($request->user()?->can('resolve', $recoveryEpisode->openEscalation) ?? false),
                 'nurse' => ['name' => $recoveryEpisode->nurse->name],
                 'patient' => [
                     'patientNumber' => $patient->patient_number,
@@ -150,6 +163,33 @@ class RecoveryEpisodeController extends Controller
                     'completedAt' => $procedureRecord->completed_at?->toIso8601String(),
                 ],
                 'doctor' => ['name' => $procedureRecord->doctor->name],
+                'readinessAssessment' => $recoveryEpisode->readinessAssessment === null ? null : [
+                    'criteriaMet' => $recoveryEpisode->readinessAssessment->criteria_met,
+                    'clinicalConcernRequiresEscalation' => $recoveryEpisode->readinessAssessment->clinical_concern_requires_escalation,
+                    'assessmentNote' => $recoveryEpisode->readinessAssessment->assessment_note,
+                    'assessedAt' => $recoveryEpisode->readinessAssessment->assessed_at->toIso8601String(),
+                    'assessedBy' => ['name' => $recoveryEpisode->readinessAssessment->assessedBy->name],
+                ],
+                'escalations' => $recoveryEpisode->escalations
+                    ->map(fn (RecoveryEscalation $escalation): array => [
+                        'id' => $escalation->id,
+                        'reason' => $escalation->reason,
+                        'status' => [
+                            'value' => $escalation->status->value,
+                            'label' => $escalation->status->displayName(),
+                        ],
+                        'escalatedAt' => $escalation->escalated_at->toIso8601String(),
+                        'escalatedBy' => ['name' => $escalation->escalatedBy->name],
+                        'resolution' => $escalation->resolution === null ? null : [
+                            'value' => $escalation->resolution->value,
+                            'label' => $escalation->resolution->displayName(),
+                        ],
+                        'resolutionNote' => $escalation->resolution_note,
+                        'resolvedAt' => $escalation->resolved_at?->toIso8601String(),
+                        'resolvedBy' => $escalation->resolvedBy === null
+                            ? null
+                            : ['name' => $escalation->resolvedBy->name],
+                    ])->values(),
                 'observations' => $recoveryEpisode->observations
                     ->map(fn (RecoveryObservation $observation): array => [
                         'id' => $observation->id,
@@ -184,6 +224,7 @@ class RecoveryEpisodeController extends Controller
             'visit.procedureDecision:id,visit_id,outcome',
             'visit.procedureRecord:id,visit_id,status',
             'visit.recoveryEpisode:id,visit_id,status',
+            'visit.recoveryEpisode.openEscalation:id,recovery_episode_id,open_marker',
         ];
     }
 

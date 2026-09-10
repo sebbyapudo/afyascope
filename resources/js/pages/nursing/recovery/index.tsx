@@ -111,8 +111,15 @@ export default function RecoveryIndex({
                                                 {formatDateTime(item.startedAt)}
                                             </td>
                                             <td className="px-5 py-4">
-                                                <StatusBadge tone="info">
-                                                    Recovery in progress
+                                                <StatusBadge
+                                                    tone={
+                                                        item.visit.nextStep ===
+                                                        'Doctor review required'
+                                                            ? 'warning'
+                                                            : 'info'
+                                                    }
+                                                >
+                                                    {item.visit.nextStep}
                                                 </StatusBadge>
                                             </td>
                                             <td className="px-5 py-4 text-right">

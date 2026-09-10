@@ -24,7 +24,9 @@ use App\Http\Controllers\ProcedureDecisionController;
 use App\Http\Controllers\ProcedureRecordController;
 use App\Http\Controllers\ReceiptController;
 use App\Http\Controllers\RecoveryEpisodeController;
+use App\Http\Controllers\RecoveryEscalationController;
 use App\Http\Controllers\RecoveryObservationController;
+use App\Http\Controllers\RecoveryReadinessAssessmentController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitCheckInController;
 use App\Http\Controllers\VisitController;
@@ -38,6 +40,7 @@ use App\Models\Payment;
 use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureRecord;
 use App\Models\RecoveryEpisode;
+use App\Models\RecoveryEscalation;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitCheckIn;
@@ -101,6 +104,16 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/nursing/recovery/{recoveryEpisode}/observations', [RecoveryObservationController::class, 'store'])
         ->can('update', 'recoveryEpisode')
         ->name('nursing.recovery.observations.store');
+    Route::post('/nursing/recovery/{recoveryEpisode}/readiness', RecoveryReadinessAssessmentController::class)
+        ->can('assessReadiness', 'recoveryEpisode')
+        ->name('nursing.recovery.readiness.store');
+
+    Route::get('/clinical/recovery-escalations', [RecoveryEscalationController::class, 'index'])
+        ->can('viewAny', RecoveryEscalation::class)
+        ->name('clinical.recovery-escalations.index');
+    Route::put('/clinical/recovery-escalations/{recoveryEscalation}', [RecoveryEscalationController::class, 'update'])
+        ->can('resolve', 'recoveryEscalation')
+        ->name('clinical.recovery-escalations.update');
 
     Route::get('/clinical/consultations', [ConsultationController::class, 'index'])
         ->can('viewAny', Consultation::class)

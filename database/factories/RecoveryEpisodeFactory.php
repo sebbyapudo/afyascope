@@ -34,6 +34,14 @@ class RecoveryEpisodeFactory extends Factory
         ]);
     }
 
+    public function readyForDischarge(): static
+    {
+        return $this->state(fn (): array => [
+            'status' => RecoveryEpisodeStatus::ReadyForDischarge,
+            'completed_at' => null,
+        ]);
+    }
+
     public function createAuthoritativeRecoveryFixture(
         ProcedureRecord $procedureRecord,
         User $nurse,

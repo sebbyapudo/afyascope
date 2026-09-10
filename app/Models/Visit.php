@@ -233,7 +233,7 @@ class Visit extends Model
                             : $this->recoveryEpisode()->first();
 
                         return $recoveryEpisode instanceof RecoveryEpisode
-                            ? 'Recovery in progress'
+                            ? $recoveryEpisode->workflowMessage()
                             : 'Ready for Nursing recovery';
                     }
 

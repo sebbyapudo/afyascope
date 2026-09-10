@@ -10,6 +10,7 @@ import { index as procedureBillingIndex } from '@/routes/billing/procedures';
 import { index as checkInIndex } from '@/routes/check-ins';
 import { index as clinicalConsultationIndex } from '@/routes/clinical/consultations';
 import { index as clinicalProcedureIndex } from '@/routes/clinical/procedures';
+import { index as recoveryEscalationIndex } from '@/routes/clinical/recovery-escalations';
 import { index as procedurePreparationIndex } from '@/routes/nursing/pre-procedure-readiness';
 import { index as recoveryIndex } from '@/routes/nursing/recovery';
 import { index as patientActivityIndex } from '@/routes/patient-activity';
@@ -98,6 +99,16 @@ export function navigationItems(
             href: clinicalProcedureIndex(),
             label: 'Procedures',
             visible: capabilities.manageProcedures,
+        },
+        {
+            active: isCurrentPath(
+                currentUrl,
+                recoveryEscalationIndex.url(),
+                true,
+            ),
+            href: recoveryEscalationIndex(),
+            label: 'Recovery Review',
+            visible: capabilities.reviewRecoveryEscalations,
         },
         {
             active: isCurrentPath(

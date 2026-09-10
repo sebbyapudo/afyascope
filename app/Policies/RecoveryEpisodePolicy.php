@@ -43,6 +43,12 @@ class RecoveryEpisodePolicy
             && $recoveryEpisode->status === RecoveryEpisodeStatus::InProgress;
     }
 
+    public function assessReadiness(User $user, RecoveryEpisode $recoveryEpisode): bool
+    {
+        return $this->update($user, $recoveryEpisode)
+            && ! $recoveryEpisode->openEscalation()->exists();
+    }
+
     /**
      * Determine whether the user can delete the model.
      */

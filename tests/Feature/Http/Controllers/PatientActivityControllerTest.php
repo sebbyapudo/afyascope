@@ -1,6 +1,8 @@
 <?php
 
 use App\Actions\Audit\RecordAuditLog;
+use App\Actions\Clinical\ResolveRecoveryEscalation;
+use App\Actions\Nursing\AssessRecoveryReadiness;
 use App\AuditAction;
 use App\Models\Appointment;
 use App\Models\AuditLog;
@@ -11,9 +13,11 @@ use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureDecision;
 use App\Models\ProcedureRecord;
 use App\Models\RecoveryEpisode;
+use App\Models\RecoveryEscalation;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitCheckIn;
+use App\RecoveryEscalationResolution;
 use App\StaffRole;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\Gate;
@@ -179,6 +183,61 @@ it('tracks completed Nurse readiness after downstream progress without Doctor wr
             ->missing('activities.data.0.consultation.assessment'));
 
     expect(Gate::forUser($nurse)->allows('procedures.manage'))->toBeFalse();
+});
+
+it('tracks Nurse recovery readiness and escalation without exposing clinical concern text', function () {
+    $doctor = User::factory()->forRole(StaffRole::Doctor)->create();
+    $nurse = User::factory()->forRole(StaffRole::Nurse)->create();
+    $receptionist = User::factory()->forRole(StaffRole::Receptionist)->create();
+    $context = patientActivityDownstreamContext($doctor, $nurse, $receptionist);
+
+    app(AssessRecoveryReadiness::class)->handle($nurse, $context['recovery'], [
+        'criteria_met' => false,
+        'clinical_concern_requires_escalation' => true,
+        'assessment_note' => 'Sensitive readiness note.',
+        'escalation_reason' => 'Sensitive clinical concern.',
+    ]);
+
+    $this->actingAs($nurse)
+        ->get(route('patient-activity.index', ['activity' => 'recovery']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('activities.data', 1)
+            ->where('activities.data.0.visit.currentStage', 'Doctor review required')
+            ->where('activities.data.0.activity.label', 'Recovery escalated')
+            ->where('activities.data.0.destination', [
+                'type' => 'recovery',
+                'id' => $context['recovery']->id,
+            ])
+            ->missing('activities.data.0.recovery.reason')
+            ->missing('activities.data.0.assessmentNote'));
+});
+
+it('tracks Doctor recovery escalation resolution as role-scoped Patient activity', function () {
+    $doctor = User::factory()->forRole(StaffRole::Doctor)->create();
+    $nurse = User::factory()->forRole(StaffRole::Nurse)->create();
+    $receptionist = User::factory()->forRole(StaffRole::Receptionist)->create();
+    $context = patientActivityDownstreamContext($doctor, $nurse, $receptionist);
+    app(AssessRecoveryReadiness::class)->handle($nurse, $context['recovery'], [
+        'criteria_met' => false,
+        'clinical_concern_requires_escalation' => true,
+        'escalation_reason' => 'Clinical review required.',
+    ]);
+    $escalation = RecoveryEscalation::query()->sole();
+
+    app(ResolveRecoveryEscalation::class)->handle($doctor, $escalation, [
+        'resolution' => RecoveryEscalationResolution::ContinueMonitoring->value,
+    ]);
+
+    $this->actingAs($doctor)
+        ->get(route('patient-activity.index', ['activity' => 'recovery']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('activities.data', 1)
+            ->where('activities.data.0.visit.currentStage', 'Recovery in progress')
+            ->where('activities.data.0.activity.label', 'Recovery escalation resolved')
+            ->where('activities.data.0.destination', [
+                'type' => 'recovery',
+                'id' => $context['recovery']->id,
+            ]));
 });
 
 it('searches filters and independently paginates attributed activity newest first', function () {

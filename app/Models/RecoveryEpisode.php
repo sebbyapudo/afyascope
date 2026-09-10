@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Str;
 use LogicException;
 
@@ -30,6 +31,9 @@ use LogicException;
  * @property-read ProcedureRecord $procedureRecord
  * @property-read User $nurse
  * @property-read Collection<int, RecoveryObservation> $observations
+ * @property-read RecoveryReadinessAssessment|null $readinessAssessment
+ * @property-read Collection<int, RecoveryEscalation> $escalations
+ * @property-read RecoveryEscalation|null $openEscalation
  */
 class RecoveryEpisode extends Model
 {
@@ -37,6 +41,8 @@ class RecoveryEpisode extends Model
     use HasFactory;
 
     private static bool $startingFromNursingWorkflow = false;
+
+    private static bool $updatingFromReadinessWorkflow = false;
 
     /** @var array<string, mixed> */
     protected $attributes = [
@@ -65,6 +71,60 @@ class RecoveryEpisode extends Model
     public function observations(): HasMany
     {
         return $this->hasMany(RecoveryObservation::class);
+    }
+
+    /** @return HasOne<RecoveryReadinessAssessment, $this> */
+    public function readinessAssessment(): HasOne
+    {
+        return $this->hasOne(RecoveryReadinessAssessment::class);
+    }
+
+    /** @return HasMany<RecoveryEscalation, $this> */
+    public function escalations(): HasMany
+    {
+        return $this->hasMany(RecoveryEscalation::class);
+    }
+
+    /** @return HasOne<RecoveryEscalation, $this> */
+    public function openEscalation(): HasOne
+    {
+        return $this->hasOne(RecoveryEscalation::class)
+            ->where('open_marker', true);
+    }
+
+    public function markReadyForDischargeFromNursingWorkflow(User $nurse): void
+    {
+        if (! $this->exists
+            || $this->status !== RecoveryEpisodeStatus::InProgress
+            || $this->nurse_user_id !== $nurse->getKey()
+            || ! $nurse->is_active
+            || $nurse->role?->slug !== StaffRole::Nurse->value) {
+            throw new LogicException('Only the responsible active Nurse may mark recovery ready for discharge.');
+        }
+
+        self::$updatingFromReadinessWorkflow = true;
+
+        try {
+            $this->status = RecoveryEpisodeStatus::ReadyForDischarge;
+            $this->save();
+        } finally {
+            self::$updatingFromReadinessWorkflow = false;
+        }
+    }
+
+    public function workflowMessage(): string
+    {
+        if ($this->status === RecoveryEpisodeStatus::ReadyForDischarge) {
+            return 'Ready for discharge';
+        }
+
+        $hasOpenEscalation = $this->relationLoaded('openEscalation')
+            ? $this->openEscalation instanceof RecoveryEscalation
+            : $this->openEscalation()->exists();
+
+        return $hasOpenEscalation
+            ? 'Doctor review required'
+            : 'Recovery in progress';
     }
 
     public static function startFromNursingWorkflow(
@@ -118,10 +178,17 @@ class RecoveryEpisode extends Model
             $recoveryEpisode->saveQuietly();
         });
 
-        static::updating(function (): void {
-            throw new LogicException(
-                'Recovery episode state and authoritative context require the future Nursing workflow.',
-            );
+        static::updating(function (RecoveryEpisode $recoveryEpisode): void {
+            $isReadinessTransition = self::$updatingFromReadinessWorkflow
+                && $recoveryEpisode->getRawOriginal('status') === RecoveryEpisodeStatus::InProgress->value
+                && $recoveryEpisode->status === RecoveryEpisodeStatus::ReadyForDischarge
+                && $recoveryEpisode->getDirty() === ['status' => RecoveryEpisodeStatus::ReadyForDischarge->value];
+
+            if (! $isReadinessTransition) {
+                throw new LogicException(
+                    'Recovery episode state and authoritative context require the future Nursing workflow.',
+                );
+            }
         });
 
         static::deleting(function (): void {

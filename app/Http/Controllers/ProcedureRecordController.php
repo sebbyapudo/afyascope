@@ -178,6 +178,7 @@ class ProcedureRecordController extends Controller
             'visit.procedureRecord:id,visit_id,status',
             'recoveryEpisode:id,procedure_record_id,nurse_user_id,recovery_number,status,started_at,completed_at',
             'recoveryEpisode.nurse:id,name',
+            'recoveryEpisode.openEscalation:id,recovery_episode_id,open_marker',
         ];
     }
 

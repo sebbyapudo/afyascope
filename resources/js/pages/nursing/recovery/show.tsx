@@ -1,4 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 import { Button, textLinkStyles } from '@/components/ui/button';
 import { FormField, formControlStyles } from '@/components/ui/form-field';
 import { PageContainer } from '@/components/ui/page-container';
@@ -8,8 +9,10 @@ import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
 import { cn } from '@/lib/utils';
 import { show as procedureShow } from '@/routes/clinical/procedures';
+import { update as escalationUpdate } from '@/routes/clinical/recovery-escalations';
 import { index as recoveryIndex } from '@/routes/nursing/recovery';
 import { store as observationStore } from '@/routes/nursing/recovery/observations';
+import { store as readinessStore } from '@/routes/nursing/recovery/readiness';
 import type { RecoveryWorkspace } from '@/types';
 
 type RecoveryShowProps = {
@@ -25,6 +28,12 @@ function formatDateTime(date: string): string {
 }
 
 export default function RecoveryShow({ recovery, status }: RecoveryShowProps) {
+    const [criteriaMet, setCriteriaMet] = useState(false);
+    const [requiresEscalation, setRequiresEscalation] = useState(false);
+    const openEscalation = recovery.escalations.find(
+        (escalation) => escalation.status.value === 'open',
+    );
+
     return (
         <>
             <Head title={recovery.recoveryNumber} />
@@ -34,12 +43,12 @@ export default function RecoveryShow({ recovery, status }: RecoveryShowProps) {
                         <Link
                             className={textLinkStyles}
                             href={
-                                recovery.canManage
+                                recovery.isResponsibleNurse
                                     ? recoveryIndex()
                                     : procedureShow(recovery.procedure.id)
                             }
                         >
-                            {recovery.canManage
+                            {recovery.isResponsibleNurse
                                 ? 'Back to recovery worklist'
                                 : 'Back to procedure'}
                         </Link>
@@ -70,7 +79,15 @@ export default function RecoveryShow({ recovery, status }: RecoveryShowProps) {
                                     : `Read-only record owned by ${recovery.nurse.name}.`}
                             </p>
                         </div>
-                        <StatusBadge tone="info">
+                        <StatusBadge
+                            tone={
+                                recovery.status.value === 'ready_for_discharge'
+                                    ? 'success'
+                                    : openEscalation
+                                      ? 'warning'
+                                      : 'info'
+                            }
+                        >
                             {recovery.status.label}
                         </StatusBadge>
                     </div>
@@ -141,6 +158,428 @@ export default function RecoveryShow({ recovery, status }: RecoveryShowProps) {
                         </div>
                     </dl>
                 </Panel>
+
+                {openEscalation ? (
+                    <Panel className="border-warning-border bg-warning-soft p-5 sm:p-8">
+                        <div className="flex flex-wrap items-start justify-between gap-4">
+                            <div className="max-w-3xl">
+                                <h2 className="text-lg font-semibold text-text">
+                                    Doctor review required
+                                </h2>
+                                <p className="mt-2 text-sm leading-6 text-text-secondary">
+                                    Escalated by{' '}
+                                    {openEscalation.escalatedBy.name} on{' '}
+                                    {formatDateTime(openEscalation.escalatedAt)}
+                                    . The patient cannot become discharge-ready
+                                    until this escalation is resolved.
+                                </p>
+                                <p className="mt-4 text-sm leading-6 whitespace-pre-wrap text-text">
+                                    {openEscalation.reason}
+                                </p>
+                            </div>
+                            <StatusBadge tone="warning">
+                                {openEscalation.status.label}
+                            </StatusBadge>
+                        </div>
+
+                        {recovery.canResolveEscalation ? (
+                            <Form
+                                {...escalationUpdate.form(openEscalation.id)}
+                                className="mt-6 grid gap-5 border-t border-warning-border pt-6"
+                                resetOnSuccess
+                            >
+                                {({ errors, processing }) => (
+                                    <>
+                                        {errors.escalation ||
+                                        errors.recovery ||
+                                        errors.actor ? (
+                                            <p
+                                                className="rounded-control border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
+                                                role="alert"
+                                            >
+                                                {errors.escalation ??
+                                                    errors.recovery ??
+                                                    errors.actor}
+                                            </p>
+                                        ) : null}
+                                        <fieldset className="grid gap-3">
+                                            <legend className="text-sm font-semibold text-text">
+                                                Clinical resolution
+                                            </legend>
+                                            <label className="flex items-start gap-3 rounded-control border border-border bg-surface p-4 focus-within:border-brand-primary">
+                                                <input
+                                                    className="mt-0.5 size-4 accent-brand-primary"
+                                                    name="resolution"
+                                                    required
+                                                    type="radio"
+                                                    value="continue_monitoring"
+                                                />
+                                                <span>
+                                                    <span className="block text-sm font-medium text-text">
+                                                        Continue Nursing
+                                                        monitoring
+                                                    </span>
+                                                    <span className="mt-1 block text-xs text-text-secondary">
+                                                        The responsible Nurse
+                                                        continues observations
+                                                        and may reassess
+                                                        readiness.
+                                                    </span>
+                                                </span>
+                                            </label>
+                                            <label className="flex items-start gap-3 rounded-control border border-border bg-surface p-4 focus-within:border-brand-primary">
+                                                <input
+                                                    className="mt-0.5 size-4 accent-brand-primary"
+                                                    name="resolution"
+                                                    required
+                                                    type="radio"
+                                                    value="clinically_cleared"
+                                                />
+                                                <span>
+                                                    <span className="block text-sm font-medium text-text">
+                                                        Clinically cleared
+                                                    </span>
+                                                    <span className="mt-1 block text-xs text-text-secondary">
+                                                        Return readiness
+                                                        authority to the
+                                                        responsible Nurse. This
+                                                        does not discharge the
+                                                        patient.
+                                                    </span>
+                                                </span>
+                                            </label>
+                                        </fieldset>
+                                        <FormField
+                                            error={errors.resolution_note}
+                                            hint="Optional concise clinical resolution. Maximum 1,000 characters."
+                                            id="resolution-note"
+                                            label="Resolution note"
+                                        >
+                                            <textarea
+                                                aria-invalid={Boolean(
+                                                    errors.resolution_note,
+                                                )}
+                                                className={cn(
+                                                    formControlStyles,
+                                                    'min-h-24 resize-y py-3',
+                                                )}
+                                                id="resolution-note"
+                                                maxLength={1000}
+                                                name="resolution_note"
+                                                rows={3}
+                                            />
+                                        </FormField>
+                                        <div>
+                                            <Button
+                                                disabled={processing}
+                                                type="submit"
+                                            >
+                                                {processing
+                                                    ? 'Resolving…'
+                                                    : 'Resolve escalation'}
+                                            </Button>
+                                        </div>
+                                    </>
+                                )}
+                            </Form>
+                        ) : null}
+                    </Panel>
+                ) : null}
+
+                <Panel className="p-5 sm:p-8">
+                    <div className="flex flex-wrap items-start justify-between gap-4">
+                        <div>
+                            <h2 className="text-lg font-semibold text-text">
+                                Recovery readiness
+                            </h2>
+                            <p className="mt-1 text-sm text-text-secondary">
+                                The responsible Nurse records the current
+                                structured readiness assessment. Readiness is
+                                not discharge.
+                            </p>
+                        </div>
+                        {recovery.readinessAssessment ? (
+                            <StatusBadge
+                                tone={
+                                    recovery.readinessAssessment.criteriaMet &&
+                                    !recovery.readinessAssessment
+                                        .clinicalConcernRequiresEscalation
+                                        ? 'success'
+                                        : recovery.readinessAssessment
+                                                .clinicalConcernRequiresEscalation
+                                          ? 'warning'
+                                          : 'neutral'
+                                }
+                            >
+                                {recovery.readinessAssessment.criteriaMet
+                                    ? 'Criteria met'
+                                    : 'Criteria not met'}
+                            </StatusBadge>
+                        ) : null}
+                    </div>
+
+                    {recovery.readinessAssessment ? (
+                        <div className="mt-6 rounded-control border border-border bg-surface-subtle p-4">
+                            <dl className="grid gap-4 text-sm sm:grid-cols-3">
+                                <div>
+                                    <dt className="text-text-secondary">
+                                        Recovery criteria
+                                    </dt>
+                                    <dd className="mt-1 font-medium text-text">
+                                        {recovery.readinessAssessment
+                                            .criteriaMet
+                                            ? 'Met'
+                                            : 'Not yet met'}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-text-secondary">
+                                        Clinical concern
+                                    </dt>
+                                    <dd className="mt-1 font-medium text-text">
+                                        {recovery.readinessAssessment
+                                            .clinicalConcernRequiresEscalation
+                                            ? 'Escalation required'
+                                            : 'No escalation required'}
+                                    </dd>
+                                </div>
+                                <div>
+                                    <dt className="text-text-secondary">
+                                        Assessed
+                                    </dt>
+                                    <dd className="mt-1 font-medium text-text">
+                                        {formatDateTime(
+                                            recovery.readinessAssessment
+                                                .assessedAt,
+                                        )}{' '}
+                                        by{' '}
+                                        {
+                                            recovery.readinessAssessment
+                                                .assessedBy.name
+                                        }
+                                    </dd>
+                                </div>
+                            </dl>
+                            {recovery.readinessAssessment.assessmentNote ? (
+                                <p className="mt-4 border-t border-border pt-4 text-sm leading-6 whitespace-pre-wrap text-text-secondary">
+                                    {
+                                        recovery.readinessAssessment
+                                            .assessmentNote
+                                    }
+                                </p>
+                            ) : null}
+                        </div>
+                    ) : (
+                        <p className="mt-6 text-sm text-text-secondary">
+                            No recovery readiness assessment has been recorded.
+                        </p>
+                    )}
+
+                    {recovery.canAssessReadiness ? (
+                        <Form
+                            {...readinessStore.form(recovery.id)}
+                            className="mt-6 grid gap-6 border-t border-border pt-6"
+                            resetOnSuccess
+                        >
+                            {({ errors, processing }) => (
+                                <>
+                                    {errors.recovery || errors.actor ? (
+                                        <p
+                                            className="rounded-control border border-danger-border bg-danger-soft px-4 py-3 text-sm text-danger"
+                                            role="alert"
+                                        >
+                                            {errors.recovery ?? errors.actor}
+                                        </p>
+                                    ) : null}
+                                    <fieldset className="grid gap-3 sm:grid-cols-2">
+                                        <legend className="mb-2 text-sm font-semibold text-text sm:col-span-2">
+                                            Structured assessment
+                                        </legend>
+                                        <label className="flex items-center gap-3 rounded-control border border-border bg-surface-subtle p-4 focus-within:border-brand-primary">
+                                            <input
+                                                name="criteria_met"
+                                                type="hidden"
+                                                value="0"
+                                            />
+                                            <input
+                                                checked={criteriaMet}
+                                                className="size-4 accent-brand-primary"
+                                                disabled={requiresEscalation}
+                                                name="criteria_met"
+                                                onChange={(event) =>
+                                                    setCriteriaMet(
+                                                        event.target.checked,
+                                                    )
+                                                }
+                                                type="checkbox"
+                                                value="1"
+                                            />
+                                            <span className="text-sm font-medium text-text">
+                                                Required recovery criteria are
+                                                met
+                                            </span>
+                                        </label>
+                                        <label className="flex items-center gap-3 rounded-control border border-border bg-surface-subtle p-4 focus-within:border-brand-primary">
+                                            <input
+                                                name="clinical_concern_requires_escalation"
+                                                type="hidden"
+                                                value="0"
+                                            />
+                                            <input
+                                                checked={requiresEscalation}
+                                                className="size-4 accent-brand-primary"
+                                                disabled={criteriaMet}
+                                                name="clinical_concern_requires_escalation"
+                                                onChange={(event) =>
+                                                    setRequiresEscalation(
+                                                        event.target.checked,
+                                                    )
+                                                }
+                                                type="checkbox"
+                                                value="1"
+                                            />
+                                            <span className="text-sm font-medium text-text">
+                                                Clinical concern requires Doctor
+                                                review
+                                            </span>
+                                        </label>
+                                    </fieldset>
+                                    {errors.criteria_met ||
+                                    errors.clinical_concern_requires_escalation ? (
+                                        <p
+                                            className="text-sm text-danger"
+                                            role="alert"
+                                        >
+                                            {errors.criteria_met ??
+                                                errors.clinical_concern_requires_escalation}
+                                        </p>
+                                    ) : null}
+                                    <FormField
+                                        error={errors.assessment_note}
+                                        hint="Optional concise readiness note. Maximum 1,000 characters."
+                                        id="assessment-note"
+                                        label="Assessment note"
+                                    >
+                                        <textarea
+                                            aria-invalid={Boolean(
+                                                errors.assessment_note,
+                                            )}
+                                            className={cn(
+                                                formControlStyles,
+                                                'min-h-24 resize-y py-3',
+                                            )}
+                                            id="assessment-note"
+                                            maxLength={1000}
+                                            name="assessment_note"
+                                            rows={3}
+                                        />
+                                    </FormField>
+                                    {requiresEscalation ? (
+                                        <FormField
+                                            error={errors.escalation_reason}
+                                            hint="Required for Doctor review. Maximum 1,000 characters."
+                                            id="escalation-reason"
+                                            label="Clinical concern"
+                                            required
+                                        >
+                                            <textarea
+                                                aria-invalid={Boolean(
+                                                    errors.escalation_reason,
+                                                )}
+                                                className={cn(
+                                                    formControlStyles,
+                                                    'min-h-24 resize-y py-3',
+                                                )}
+                                                id="escalation-reason"
+                                                maxLength={1000}
+                                                name="escalation_reason"
+                                                required
+                                                rows={3}
+                                            />
+                                        </FormField>
+                                    ) : null}
+                                    <div>
+                                        <Button
+                                            disabled={processing}
+                                            type="submit"
+                                        >
+                                            {processing
+                                                ? 'Recording…'
+                                                : requiresEscalation
+                                                  ? 'Assess and escalate'
+                                                  : 'Record readiness assessment'}
+                                        </Button>
+                                    </div>
+                                </>
+                            )}
+                        </Form>
+                    ) : null}
+                </Panel>
+
+                {recovery.escalations.length > 0 ? (
+                    <Panel className="overflow-hidden">
+                        <div className="border-b border-border px-5 py-5 sm:px-8">
+                            <h2 className="text-lg font-semibold text-text">
+                                Clinical escalation history
+                            </h2>
+                            <p className="mt-1 text-sm text-text-secondary">
+                                Durable Nurse escalations and Doctor
+                                resolutions, newest first.
+                            </p>
+                        </div>
+                        <ol className="divide-y divide-border">
+                            {recovery.escalations.map((escalation) => (
+                                <li className="p-5 sm:p-8" key={escalation.id}>
+                                    <div className="flex flex-wrap items-start justify-between gap-3">
+                                        <div>
+                                            <p className="font-semibold text-text">
+                                                Escalated{' '}
+                                                {formatDateTime(
+                                                    escalation.escalatedAt,
+                                                )}{' '}
+                                                by {escalation.escalatedBy.name}
+                                            </p>
+                                            <p className="mt-3 text-sm leading-6 whitespace-pre-wrap text-text-secondary">
+                                                {escalation.reason}
+                                            </p>
+                                        </div>
+                                        <StatusBadge
+                                            tone={
+                                                escalation.status.value ===
+                                                'open'
+                                                    ? 'warning'
+                                                    : 'success'
+                                            }
+                                        >
+                                            {escalation.status.label}
+                                        </StatusBadge>
+                                    </div>
+                                    {escalation.resolution &&
+                                    escalation.resolvedAt &&
+                                    escalation.resolvedBy ? (
+                                        <div className="mt-4 rounded-control border border-border bg-surface-subtle p-4 text-sm">
+                                            <p className="font-medium text-text">
+                                                {escalation.resolution.label}
+                                            </p>
+                                            <p className="mt-1 text-text-secondary">
+                                                Resolved{' '}
+                                                {formatDateTime(
+                                                    escalation.resolvedAt,
+                                                )}{' '}
+                                                by {escalation.resolvedBy.name}
+                                            </p>
+                                            {escalation.resolutionNote ? (
+                                                <p className="mt-3 leading-6 whitespace-pre-wrap text-text-secondary">
+                                                    {escalation.resolutionNote}
+                                                </p>
+                                            ) : null}
+                                        </div>
+                                    ) : null}
+                                </li>
+                            ))}
+                        </ol>
+                    </Panel>
+                ) : null}
 
                 {recovery.canManage ? (
                     <Panel className="p-5 sm:p-8">

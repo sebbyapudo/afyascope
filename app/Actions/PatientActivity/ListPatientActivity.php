@@ -13,7 +13,9 @@ use App\Models\ProcedureDecision;
 use App\Models\ProcedureRecord;
 use App\Models\Receipt;
 use App\Models\RecoveryEpisode;
+use App\Models\RecoveryEscalation;
 use App\Models\RecoveryObservation;
+use App\Models\RecoveryReadinessAssessment;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitCheckIn;
@@ -185,6 +187,7 @@ class ListPatientActivity
                 'preProcedureReadiness:id,visit_id,status',
                 'procedureRecord:id,visit_id,status',
                 'recoveryEpisode:id,visit_id,status',
+                'recoveryEpisode.openEscalation:id,recovery_episode_id,open_marker',
                 'consultationBill:id,visit_id,type',
                 'consultationBill.payment:id,bill_id',
                 'consultationBill.financialClearance:id,bill_id',
@@ -271,6 +274,7 @@ class ListPatientActivity
             $this->procedureEvent($actor, AuditAction::ProcedureStarted),
             $this->procedureEvent($actor, AuditAction::ProcedureDocumentationUpdated),
             $this->procedureEvent($actor, AuditAction::ProcedureCompleted),
+            $this->recoveryEscalationEvent($actor, AuditAction::RecoveryEscalationResolved),
         ];
     }
 
@@ -282,6 +286,8 @@ class ListPatientActivity
             $this->readinessEvent($actor, AuditAction::NursingReadinessCompleted),
             $this->recoveryEvent($actor),
             $this->recoveryObservationEvent($actor),
+            $this->recoveryReadinessEvent($actor),
+            $this->recoveryEscalationEvent($actor, AuditAction::RecoveryEscalated),
         ];
     }
 
@@ -537,6 +543,46 @@ class ListPatientActivity
             ]);
     }
 
+    private function recoveryReadinessEvent(User $actor): Builder
+    {
+        return $this->eventBase($actor, AuditAction::RecoveryReadinessAssessed, RecoveryReadinessAssessment::class)
+            ->join('recovery_readiness_assessments', 'recovery_readiness_assessments.id', '=', 'audit_logs.subject_id')
+            ->join('recovery_episodes', 'recovery_episodes.id', '=', 'recovery_readiness_assessments.recovery_episode_id')
+            ->join('visits', 'visits.id', '=', 'recovery_episodes.visit_id')
+            ->select([
+                'audit_logs.id as event_id',
+                'visits.id as visit_id',
+                'audit_logs.created_at as activity_at',
+                'recovery_episodes.recovery_number as activity_reference',
+                'recovery_episodes.id as destination_id',
+            ])
+            ->selectRaw('? as activity_type, ? as activity_label, ? as destination_type', [
+                'recovery',
+                AuditAction::RecoveryReadinessAssessed->displayName(),
+                'recovery',
+            ]);
+    }
+
+    private function recoveryEscalationEvent(User $actor, AuditAction $action): Builder
+    {
+        return $this->eventBase($actor, $action, RecoveryEscalation::class)
+            ->join('recovery_escalations', 'recovery_escalations.id', '=', 'audit_logs.subject_id')
+            ->join('recovery_episodes', 'recovery_episodes.id', '=', 'recovery_escalations.recovery_episode_id')
+            ->join('visits', 'visits.id', '=', 'recovery_episodes.visit_id')
+            ->select([
+                'audit_logs.id as event_id',
+                'visits.id as visit_id',
+                'audit_logs.created_at as activity_at',
+                'recovery_episodes.recovery_number as activity_reference',
+                'recovery_episodes.id as destination_id',
+            ])
+            ->selectRaw('? as activity_type, ? as activity_label, ? as destination_type', [
+                'recovery',
+                $action->displayName(),
+                'recovery',
+            ]);
+    }
+
     private function eventBase(User $actor, AuditAction $action, string $subjectType): Builder
     {
         return DB::table('audit_logs')
@@ -566,6 +612,7 @@ class ListPatientActivity
                 ['value' => 'consultation', 'label' => 'Consultation'],
                 ['value' => 'procedure_decision', 'label' => 'Procedure decision'],
                 ['value' => 'procedure', 'label' => 'Procedure'],
+                ['value' => 'recovery', 'label' => 'Recovery review'],
             ],
             StaffRole::Nurse => [
                 ['value' => 'preparation', 'label' => 'Procedure preparation'],

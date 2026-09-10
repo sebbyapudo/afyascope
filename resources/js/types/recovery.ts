@@ -67,12 +67,15 @@ export type RecoveryWorkspace = {
     id: number;
     recoveryNumber: string;
     status: {
-        value: 'in_progress';
+        value: 'in_progress' | 'ready_for_discharge' | 'completed';
         label: string;
     };
     startedAt: string;
     completedAt: string | null;
     canManage: boolean;
+    isResponsibleNurse: boolean;
+    canAssessReadiness: boolean;
+    canResolveEscalation: boolean;
     nurse: {
         name: string;
     };
@@ -94,5 +97,46 @@ export type RecoveryWorkspace = {
     doctor: {
         name: string;
     };
+    readinessAssessment: {
+        criteriaMet: boolean;
+        clinicalConcernRequiresEscalation: boolean;
+        assessmentNote: string | null;
+        assessedAt: string;
+        assessedBy: { name: string };
+    } | null;
+    escalations: RecoveryEscalation[];
     observations: RecoveryObservation[];
+};
+
+export type RecoveryEscalation = {
+    id: number;
+    reason: string;
+    status: {
+        value: 'open' | 'resolved';
+        label: string;
+    };
+    escalatedAt: string;
+    escalatedBy: { name: string };
+    resolution: {
+        value: 'continue_monitoring' | 'clinically_cleared';
+        label: string;
+    } | null;
+    resolutionNote: string | null;
+    resolvedAt: string | null;
+    resolvedBy: { name: string } | null;
+};
+
+export type RecoveryEscalationQueueItem = {
+    id: number;
+    reason: string;
+    escalatedAt: string;
+    escalatedBy: { name: string };
+    recovery: {
+        id: number;
+        recoveryNumber: string;
+        nurse: { name: string };
+    };
+    patient: { patientNumber: string; name: string };
+    visit: { visitNumber: string };
+    procedure: { procedureNumber: string; name: string };
 };

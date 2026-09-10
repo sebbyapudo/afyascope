@@ -37,6 +37,7 @@ export type Capabilities = {
     viewProcedures: boolean;
     manageProcedures: boolean;
     manageRecovery: boolean;
+    reviewRecoveryEscalations: boolean;
     viewPatientActivity: boolean;
 };
 
