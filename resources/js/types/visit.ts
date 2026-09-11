@@ -1,5 +1,5 @@
 export type VisitStatus = {
-    value: 'checked_in' | 'created';
+    value: 'checked_in' | 'completed' | 'created';
     label: string;
 };
 
@@ -25,8 +25,23 @@ export type VisitSummary = {
     id: number;
     visitNumber: string;
     occurredAt: string;
+    completedAt: string | null;
     status: VisitStatus;
     nextStep: string;
+    outcome: {
+        value: 'no_procedure' | 'procedure_required';
+        label: string;
+        procedureName: string | null;
+        decidedAt: string;
+    } | null;
+    clinicalActors: {
+        doctor: { name: string } | null;
+        nurse: { name: string } | null;
+    };
+    discharge: {
+        dischargeNumber: string;
+        dischargedAt: string;
+    } | null;
     canCheckIn: boolean;
     checkIn: {
         id: number;

@@ -23,7 +23,7 @@ class VisitController extends Controller
         ]);
         $search = trim((string) ($validated['q'] ?? ''));
         $visits = Visit::query()
-            ->select(['id', 'patient_id', 'appointment_id', 'visit_number', 'occurred_at', 'status'])
+            ->select(['id', 'patient_id', 'appointment_id', 'visit_number', 'occurred_at', 'status', 'completed_at'])
             ->with([
                 'patient:id,patient_number,first_name,middle_name,last_name',
                 'appointment:id,appointment_number',
@@ -31,8 +31,13 @@ class VisitController extends Controller
                 'consultationBill.payment:id,bill_id',
                 'consultationBill.financialClearance:id,bill_id,clearance_number,granted_at',
                 'checkIn:id,visit_id,check_in_number,checked_in_at',
-                'consultation:id,visit_id,status',
-                'procedureDecision:id,visit_id,outcome',
+                'consultation:id,visit_id,doctor_user_id,status,finalized_at',
+                'consultation.doctor:id,name',
+                'procedureDecision:id,visit_id,service_catalog_item_id,outcome,decided_at',
+                'procedureDecision.serviceCatalogItem:id,name',
+                'recoveryEpisode:id,visit_id,nurse_user_id,status,completed_at',
+                'recoveryEpisode.discharge:id,recovery_episode_id,discharged_by_user_id,discharge_number,discharged_at',
+                'recoveryEpisode.discharge.dischargedBy:id,name',
             ])
             ->when($search !== '', function (Builder $query) use ($search): void {
                 $searchPrefix = addcslashes($search, '\\%_').'%';
@@ -80,8 +85,13 @@ class VisitController extends Controller
             'consultationBill.payment:id,bill_id',
             'consultationBill.financialClearance:id,bill_id,clearance_number,granted_at',
             'checkIn:id,visit_id,check_in_number,checked_in_at',
-            'consultation:id,visit_id,status',
-            'procedureDecision:id,visit_id,outcome',
+            'consultation:id,visit_id,doctor_user_id,status,finalized_at',
+            'consultation.doctor:id,name',
+            'procedureDecision:id,visit_id,service_catalog_item_id,outcome,decided_at',
+            'procedureDecision.serviceCatalogItem:id,name',
+            'recoveryEpisode:id,visit_id,nurse_user_id,status,completed_at',
+            'recoveryEpisode.discharge:id,recovery_episode_id,discharged_by_user_id,discharge_number,discharged_at',
+            'recoveryEpisode.discharge.dischargedBy:id,name',
         ]);
         $status = $request->session()->get('status');
 
@@ -104,11 +114,30 @@ class VisitController extends Controller
             'id' => $visit->id,
             'visitNumber' => $visit->visit_number,
             'occurredAt' => $visit->occurred_at->toIso8601String(),
+            'completedAt' => $visit->completed_at?->toIso8601String(),
             'status' => [
                 'value' => $visit->status->value,
                 'label' => $visit->status->displayName(),
             ],
             'nextStep' => $visit->workflowMessage(),
+            'outcome' => $visit->procedureDecision === null ? null : [
+                'value' => $visit->procedureDecision->outcome->value,
+                'label' => $visit->procedureDecision->outcome->displayName(),
+                'procedureName' => $visit->procedureDecision->serviceCatalogItem?->name,
+                'decidedAt' => $visit->procedureDecision->decided_at->toIso8601String(),
+            ],
+            'clinicalActors' => [
+                'doctor' => $visit->consultation?->doctor === null
+                    ? null
+                    : ['name' => $visit->consultation->doctor->name],
+                'nurse' => $visit->recoveryEpisode?->discharge?->dischargedBy === null
+                    ? null
+                    : ['name' => $visit->recoveryEpisode->discharge->dischargedBy->name],
+            ],
+            'discharge' => $visit->recoveryEpisode?->discharge === null ? null : [
+                'dischargeNumber' => $visit->recoveryEpisode->discharge->discharge_number,
+                'dischargedAt' => $visit->recoveryEpisode->discharge->discharged_at->toIso8601String(),
+            ],
             'canCheckIn' => $visit->status === VisitStatus::Created
                 && $consultationBill?->financialClearance instanceof FinancialClearance
                 && ! $visit->checkIn instanceof VisitCheckIn,

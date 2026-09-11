@@ -149,7 +149,14 @@ export default function VisitIndex({ filters, visits }: VisitIndexProps) {
                                                 )}
                                             </td>
                                             <td className="px-5 py-4">
-                                                <StatusBadge tone="info">
+                                                <StatusBadge
+                                                    tone={
+                                                        visit.status.value ===
+                                                        'completed'
+                                                            ? 'success'
+                                                            : 'info'
+                                                    }
+                                                >
                                                     {visit.status.label}
                                                 </StatusBadge>
                                             </td>

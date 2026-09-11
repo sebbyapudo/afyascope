@@ -201,11 +201,11 @@ export default function ShowPatient({
                     >
                         <div className="border-b border-border px-5 py-4">
                             <h2 className="text-lg font-semibold text-text">
-                                Visit history
+                                Visit timeline and history
                             </h2>
                             <p className="mt-1 text-sm text-text-secondary">
-                                Attendance episodes ordered from newest to
-                                oldest.
+                                Longitudinal attendance outcomes ordered from
+                                newest to oldest.
                             </p>
                         </div>
                         {visitHistory.data.length === 0 ? (
@@ -224,7 +224,7 @@ export default function ShowPatient({
                             />
                         ) : (
                             <div className="overflow-x-auto">
-                                <table className="w-full min-w-4xl text-left text-sm">
+                                <table className="w-full min-w-5xl text-left text-sm">
                                     <thead className="bg-surface-subtle text-xs font-semibold tracking-wide text-text-secondary uppercase">
                                         <tr>
                                             <th
@@ -237,7 +237,7 @@ export default function ShowPatient({
                                                 className="px-5 py-4"
                                                 scope="col"
                                             >
-                                                Occurred
+                                                Timing
                                             </th>
                                             <th
                                                 className="px-5 py-4"
@@ -249,7 +249,13 @@ export default function ShowPatient({
                                                 className="px-5 py-4"
                                                 scope="col"
                                             >
-                                                Current workflow
+                                                Clinical outcome
+                                            </th>
+                                            <th
+                                                className="px-5 py-4"
+                                                scope="col"
+                                            >
+                                                Workflow
                                             </th>
                                             <th
                                                 className="px-5 py-4 text-right"
@@ -275,14 +281,66 @@ export default function ShowPatient({
                                                             visit.occurredAt,
                                                         )}
                                                     </time>
+                                                    {visit.completedAt ? (
+                                                        <span className="mt-1 block text-xs text-text-muted">
+                                                            Completed{' '}
+                                                            {formatDateTime(
+                                                                visit.completedAt,
+                                                            )}
+                                                        </span>
+                                                    ) : null}
                                                 </td>
                                                 <td className="px-5 py-4">
-                                                    <StatusBadge tone="info">
+                                                    <StatusBadge
+                                                        tone={
+                                                            visit.status
+                                                                .value ===
+                                                            'completed'
+                                                                ? 'success'
+                                                                : 'info'
+                                                        }
+                                                    >
                                                         {visit.status.label}
                                                     </StatusBadge>
                                                 </td>
                                                 <td className="px-5 py-4 text-text-secondary">
+                                                    {visit.outcome ? (
+                                                        <>
+                                                            <span className="block text-text">
+                                                                {visit.outcome
+                                                                    .procedureName ??
+                                                                    visit
+                                                                        .outcome
+                                                                        .label}
+                                                            </span>
+                                                            <span className="mt-1 block text-xs text-text-muted">
+                                                                Doctor:{' '}
+                                                                {visit
+                                                                    .clinicalActors
+                                                                    .doctor
+                                                                    ?.name ??
+                                                                    'Not recorded'}
+                                                                {visit
+                                                                    .clinicalActors
+                                                                    .nurse?.name
+                                                                    ? ` · Discharging Nurse: ${visit.clinicalActors.nurse.name}`
+                                                                    : ''}
+                                                            </span>
+                                                        </>
+                                                    ) : (
+                                                        'Outcome pending'
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-4 text-text-secondary">
                                                     {visit.nextStep}
+                                                    {visit.discharge ? (
+                                                        <span className="mt-1 block text-xs text-text-muted tabular-nums">
+                                                            {
+                                                                visit.discharge
+                                                                    .dischargeNumber
+                                                            }
+                                                        </span>
+                                                    ) : null}
                                                 </td>
                                                 <td className="px-5 py-4 text-right">
                                                     <Link

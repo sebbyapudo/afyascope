@@ -10,7 +10,6 @@ use App\Models\User;
 use App\StaffRole;
 use Illuminate\Database\QueryException;
 use Illuminate\Support\Facades\Schema;
-use LogicException;
 
 it('has the durable serial observation schema and relationships', function () {
     expect(Schema::hasColumns('recovery_observations', [

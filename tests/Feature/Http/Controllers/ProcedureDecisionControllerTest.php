@@ -118,9 +118,17 @@ it('records and projects no-procedure without exposing a billing handoff', funct
             ])
             ->where('consultation.procedureDecision.service', null)
             ->where('consultation.procedureDecision.handoff', null)
-            ->where('consultation.visit.nextStep', 'No procedure required')
+            ->where('consultation.status.value', 'finalized')
+            ->where('consultation.visit.status.value', 'completed')
+            ->where('consultation.visit.nextStep', 'Consultation completed / Completed')
             ->where('procedureServices', [])
         );
+
+    $this->actingAs($doctor)
+        ->get(route('clinical.consultations.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('readyVisits.pagination.total', 0)
+            ->where('inProgressConsultations.pagination.total', 0));
 
     expect(ProcedureBillingHandoff::query()->count())->toBe(0)
         ->and(Bill::query()->where('type', 'procedure')->count())->toBe(0);

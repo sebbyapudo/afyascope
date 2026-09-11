@@ -3,6 +3,7 @@
 namespace App\Actions\Nursing;
 
 use App\Actions\Audit\RecordAuditLog;
+use App\Actions\Visits\CompleteVisit;
 use App\AuditAction;
 use App\Models\RecoveryDischarge;
 use App\Models\RecoveryEpisode;
@@ -22,7 +23,10 @@ use Illuminate\Validation\ValidationException;
 
 class DischargeRecovery
 {
-    public function __construct(private RecordAuditLog $recordAuditLog) {}
+    public function __construct(
+        private RecordAuditLog $recordAuditLog,
+        private CompleteVisit $completeVisit,
+    ) {}
 
     /** @param array<string, mixed> $attributes */
     public function handle(User $actor, RecoveryEpisode $recoveryEpisode, array $attributes): RecoveryDischarge
@@ -126,6 +130,8 @@ class DischargeRecovery
                     'discharged_at' => $discharge->discharged_at->toIso8601String(),
                 ],
             );
+
+            $this->completeVisit->afterRecoveryDischarge($lockedActor, $discharge);
 
             return $discharge->refresh();
         }, attempts: 3);

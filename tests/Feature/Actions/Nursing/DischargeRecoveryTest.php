@@ -4,9 +4,12 @@ use App\Actions\Audit\RecordAuditLog;
 use App\Actions\Clinical\ResolveRecoveryEscalation;
 use App\Actions\Nursing\AssessRecoveryReadiness;
 use App\Actions\Nursing\DischargeRecovery;
+use App\Actions\Visits\CompleteVisit;
 use App\AuditAction;
+use App\ConsultationStatus;
 use App\Models\AuditLog;
 use App\Models\PreProcedureReadiness;
+use App\Models\ProcedureBillingHandoff;
 use App\Models\ProcedureDecision;
 use App\Models\ProcedureRecord;
 use App\Models\RecoveryDischarge;
@@ -22,6 +25,7 @@ use App\VisitStatus;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
+use Inertia\Testing\AssertableInertia as Assert;
 
 it('atomically finalizes a documented discharge by the responsible Nurse', function () {
     [$recovery, $nurse] = readyRecoveryForDischargeAction();
@@ -29,7 +33,9 @@ it('atomically finalizes a documented discharge by the responsible Nurse', funct
 
     $discharge = app(DischargeRecovery::class)->handle($nurse, $recovery, dischargeActionAttributes());
     $audit = AuditLog::query()->where('action', AuditAction::RecoveryDischarged)->sole();
+    $completionAudit = AuditLog::query()->where('action', AuditAction::VisitCompleted)->sole();
     $encodedAudit = json_encode($audit->toArray());
+    $encodedCompletionAudit = json_encode($completionAudit->toArray());
 
     expect($discharge->recoveryEpisode->is($recovery))->toBeTrue()
         ->and($discharge->dischargedBy->is($nurse))->toBeTrue()
@@ -46,8 +52,9 @@ it('atomically finalizes a documented discharge by the responsible Nurse', funct
         ->and($discharge->follow_up_instructions)->toBe('Attend the planned clinic review.')
         ->and($recovery->fresh()->status)->toBe(RecoveryEpisodeStatus::Completed)
         ->and($recovery->fresh()->completed_at?->toDateTimeString())->toBe('2026-09-11 09:30:00')
-        ->and($recovery->visit->fresh()->status)->toBe(VisitStatus::CheckedIn)
-        ->and($recovery->visit->fresh()->workflowMessage())->toBe('Discharged')
+        ->and($recovery->visit->fresh()->status)->toBe(VisitStatus::Completed)
+        ->and($recovery->visit->fresh()->completed_at?->toDateTimeString())->toBe('2026-09-11 09:30:00')
+        ->and($recovery->visit->fresh()->workflowMessage())->toBe('Discharged / Completed')
         ->and($audit->actor_id)->toBe($nurse->id)
         ->and($audit->subject->is($discharge))->toBeTrue()
         ->and($audit->after_values)->toHaveCount(8)
@@ -58,9 +65,22 @@ it('atomically finalizes a documented discharge by the responsible Nurse', funct
             'discharged_by_user_id' => $nurse->id,
             'recovery_status' => RecoveryEpisodeStatus::Completed->value,
         ])
+        ->and($completionAudit->actor_id)->toBe($nurse->id)
+        ->and($completionAudit->subject->is($recovery->visit))->toBeTrue()
+        ->and($completionAudit->after_values)->toHaveCount(7)
+        ->and($completionAudit->after_values)->toMatchArray([
+            'visit_id' => $recovery->visit_id,
+            'visit_number' => $recovery->visit->visit_number,
+            'completion_source_type' => 'recovery_discharge',
+            'completion_source_id' => $discharge->id,
+            'completion_source_reference' => $discharge->discharge_number,
+        ])
         ->and($encodedAudit)->not->toContain('Alert and comfortable')
         ->and($encodedAudit)->not->toContain('usual medicines')
-        ->and($encodedAudit)->not->toContain('severe pain');
+        ->and($encodedAudit)->not->toContain('severe pain')
+        ->and($encodedCompletionAudit)->not->toContain('Alert and comfortable')
+        ->and($encodedCompletionAudit)->not->toContain('usual medicines')
+        ->and($encodedCompletionAudit)->not->toContain('severe pain');
 });
 
 it('rejects discharge before readiness or when the current assessment does not permit it', function () {
@@ -178,7 +198,7 @@ it('rolls back the record recovery transition and audit when finalization fails'
     $auditRecorder = Mockery::mock(RecordAuditLog::class);
     $auditRecorder->shouldReceive('handle')->once()->andThrow(new RuntimeException('Audit failed.'));
 
-    expect(fn () => (new DischargeRecovery($auditRecorder))->handle(
+    expect(fn () => (new DischargeRecovery($auditRecorder, app(CompleteVisit::class)))->handle(
         $nurse,
         $recovery,
         dischargeActionAttributes(),
@@ -188,6 +208,87 @@ it('rolls back the record recovery transition and audit when finalization fails'
         ->and($recovery->fresh()->status)->toBe(RecoveryEpisodeStatus::ReadyForDischarge)
         ->and($recovery->fresh()->completed_at)->toBeNull()
         ->and(AuditLog::query()->where('action', AuditAction::RecoveryDischarged)->count())->toBe(0);
+});
+
+it('rolls back discharge and lifecycle completion when the Visit completion audit fails', function () {
+    [$recovery, $nurse] = readyRecoveryForDischargeAction();
+    $auditCount = AuditLog::query()->count();
+    $auditRecorder = Mockery::mock(RecordAuditLog::class);
+    $auditRecorder->shouldReceive('handle')
+        ->once()
+        ->withArgs(fn (User $actor, AuditAction $action): bool => $actor->is($nurse)
+            && $action === AuditAction::RecoveryDischarged)
+        ->andReturn(new AuditLog)
+        ->ordered();
+    $auditRecorder->shouldReceive('handle')
+        ->once()
+        ->withArgs(fn (User $actor, AuditAction $action): bool => $actor->is($nurse)
+            && $action === AuditAction::VisitCompleted)
+        ->andThrow(new RuntimeException('Visit completion audit failed.'))
+        ->ordered();
+    $completeVisit = new CompleteVisit($auditRecorder);
+
+    expect(fn () => (new DischargeRecovery($auditRecorder, $completeVisit))->handle(
+        $nurse,
+        $recovery,
+        dischargeActionAttributes(),
+    ))->toThrow(RuntimeException::class, 'Visit completion audit failed.');
+
+    expect(RecoveryDischarge::query()->count())->toBe(0)
+        ->and($recovery->fresh()->status)->toBe(RecoveryEpisodeStatus::ReadyForDischarge)
+        ->and($recovery->fresh()->completed_at)->toBeNull()
+        ->and($recovery->visit->fresh()->status)->toBe(VisitStatus::CheckedIn)
+        ->and($recovery->visit->fresh()->completed_at)->toBeNull()
+        ->and($recovery->visit->consultation->fresh()->status)->toBe(ConsultationStatus::InProgress)
+        ->and($recovery->visit->consultation->fresh()->finalized_at)->toBeNull()
+        ->and(AuditLog::query()->count())->toBe($auditCount);
+});
+
+it('removes the completed procedure Visit from every staff operational queue', function () {
+    [$recovery, $nurse] = readyRecoveryForDischargeAction();
+    $decision = $recovery->procedureRecord->procedureDecision;
+    $doctor = $decision->doctor;
+    ProcedureBillingHandoff::createFromProcedureDecision($decision);
+
+    app(DischargeRecovery::class)->handle($nurse, $recovery, dischargeActionAttributes());
+
+    $this->actingAs(User::factory()->forRole(StaffRole::Receptionist)->create())
+        ->get(route('check-ins.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('visits.pagination.total', 0));
+
+    $accountant = User::factory()->forRole(StaffRole::Accountant)->create();
+    $this->actingAs($accountant)
+        ->get(route('billing.consultations.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('visits.pagination.total', 0));
+    $this->actingAs($accountant)
+        ->get(route('billing.procedures.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('handoffs.pagination.total', 0));
+    $this->actingAs($accountant)
+        ->get(route('billing.payments.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('bills.pagination.total', 0));
+    $this->actingAs($accountant)
+        ->get(route('billing.clearances.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('bills.pagination.total', 0));
+
+    $this->actingAs($doctor)
+        ->get(route('clinical.consultations.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('readyVisits.pagination.total', 0)
+            ->where('inProgressConsultations.pagination.total', 0));
+    $this->actingAs($doctor)
+        ->get(route('clinical.procedures.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('readyProcedures.pagination.total', 0)
+            ->where('inProgressProcedures.pagination.total', 0));
+
+    $this->actingAs($nurse)
+        ->get(route('nursing.pre-procedure-readiness.index'))
+        ->assertInertia(fn (Assert $page) => $page->where('preparations.pagination.total', 0));
+    $this->actingAs($nurse)
+        ->get(route('nursing.recovery.index'))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('awaitingRecoveries.pagination.total', 0)
+            ->where('activeRecoveries.pagination.total', 0));
 });
 
 /** @return array{0: RecoveryEpisode, 1: User} */

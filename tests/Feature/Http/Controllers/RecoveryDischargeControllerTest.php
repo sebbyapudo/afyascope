@@ -39,7 +39,7 @@ it('lets the responsible Nurse explicitly discharge and renders a sanitized fina
         ->assertInertia(fn (Assert $page) => $page
             ->where('recovery.status.value', 'completed')
             ->where('recovery.status.label', 'Discharged')
-            ->where('recovery.visit.nextStep', 'Discharged')
+            ->where('recovery.visit.nextStep', 'Discharged / Completed')
             ->where('recovery.canManage', false)
             ->where('recovery.canAssessReadiness', false)
             ->where('recovery.canDischarge', false)
@@ -168,14 +168,15 @@ it('keeps ready work actionable then removes discharged recovery from the active
     $this->actingAs($receptionist)
         ->get(route('patients.show', $recovery->visit->patient))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('visitHistory.data.0.nextStep', 'Discharged'));
+            ->where('visitHistory.data.0.status.value', VisitStatus::Completed->value)
+            ->where('visitHistory.data.0.nextStep', 'Discharged / Completed'));
 
     $this->actingAs($recovery->procedureRecord->doctor)
         ->get(route('clinical.procedures.show', $recovery->procedureRecord))
         ->assertInertia(fn (Assert $page) => $page
-            ->where('procedure.visit.nextStep', 'Discharged'));
+            ->where('procedure.visit.nextStep', 'Discharged / Completed'));
 
-    expect($recovery->visit->fresh()->status)->toBe(VisitStatus::CheckedIn)
+    expect($recovery->visit->fresh()->status)->toBe(VisitStatus::Completed)
         ->and(AuditLog::query()->where('action', AuditAction::RecoveryDischarged)->count())->toBe(1)
         ->and(Route::has('visits.complete'))->toBeFalse()
         ->and(Route::has('patient-timeline.index'))->toBeFalse();

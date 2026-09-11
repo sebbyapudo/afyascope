@@ -6,6 +6,7 @@ use App\BillType;
 use App\ConsultationStatus;
 use App\PreProcedureReadinessStatus;
 use App\ProcedureDecisionOutcome;
+use App\RecoveryEpisodeStatus;
 use App\VisitStatus;
 use Carbon\CarbonImmutable;
 use Database\Factories\VisitFactory;
@@ -28,6 +29,7 @@ use LogicException;
  * @property string $visit_number
  * @property CarbonImmutable $occurred_at
  * @property VisitStatus $status
+ * @property CarbonImmutable|null $completed_at
  * @property CarbonImmutable|null $created_at
  * @property CarbonImmutable|null $updated_at
  * @property-read Appointment|null $appointment
@@ -48,6 +50,8 @@ class Visit extends Model
 {
     /** @use HasFactory<VisitFactory> */
     use HasFactory;
+
+    private static bool $completingFromClinicalWorkflow = false;
 
     /** @var array<string, mixed> */
     protected $attributes = [
@@ -208,6 +212,18 @@ class Visit extends Model
 
     public function workflowMessage(): string
     {
+        if ($this->status === VisitStatus::Completed) {
+            $procedureDecision = $this->relationLoaded('procedureDecision')
+                ? $this->procedureDecision
+                : $this->procedureDecision()->first();
+
+            return match ($procedureDecision?->outcome) {
+                ProcedureDecisionOutcome::ProcedureRequired => 'Discharged / Completed',
+                ProcedureDecisionOutcome::NoProcedure => 'Consultation completed / Completed',
+                default => 'Completed',
+            };
+        }
+
         if ($this->status === VisitStatus::CheckedIn) {
             $consultation = $this->relationLoaded('consultation')
                 ? $this->consultation
@@ -316,11 +332,57 @@ class Visit extends Model
         return $this->status->handoffLabel();
     }
 
+    public function completeFromClinicalWorkflow(
+        RecoveryDischarge|ProcedureDecision $authoritativeHandoff,
+        CarbonImmutable $completedAt,
+    ): void {
+        if (! $this->exists
+            || $this->status !== VisitStatus::CheckedIn
+            || $this->completed_at !== null
+            || ! $this->matchesCompletionHandoff($authoritativeHandoff, $completedAt)) {
+            throw new LogicException('Visit completion requires its authoritative terminal clinical handoff.');
+        }
+
+        self::$completingFromClinicalWorkflow = true;
+
+        try {
+            $this->status = VisitStatus::Completed;
+            $this->completed_at = $completedAt;
+            $this->save();
+        } finally {
+            self::$completingFromClinicalWorkflow = false;
+        }
+    }
+
+    private function matchesCompletionHandoff(
+        RecoveryDischarge|ProcedureDecision $authoritativeHandoff,
+        CarbonImmutable $completedAt,
+    ): bool {
+        if ($authoritativeHandoff instanceof ProcedureDecision) {
+            return $authoritativeHandoff->exists
+                && $authoritativeHandoff->visit_id === $this->getKey()
+                && $authoritativeHandoff->outcome === ProcedureDecisionOutcome::NoProcedure
+                && $authoritativeHandoff->decided_at->equalTo($completedAt);
+        }
+
+        $recoveryEpisode = $authoritativeHandoff->relationLoaded('recoveryEpisode')
+            ? $authoritativeHandoff->recoveryEpisode
+            : $authoritativeHandoff->recoveryEpisode()->first();
+
+        return $authoritativeHandoff->exists
+            && $recoveryEpisode instanceof RecoveryEpisode
+            && $recoveryEpisode->visit_id === $this->getKey()
+            && $recoveryEpisode->status === RecoveryEpisodeStatus::Completed
+            && $recoveryEpisode->completed_at?->equalTo($completedAt) === true
+            && $authoritativeHandoff->discharged_at->equalTo($completedAt);
+    }
+
     protected static function booted(): void
     {
         static::creating(function (Visit $visit): void {
             $visit->visit_number = 'TMP-'.Str::ulid();
             $visit->status = VisitStatus::Created;
+            $visit->completed_at = null;
         });
 
         static::created(function (Visit $visit): void {
@@ -329,6 +391,11 @@ class Visit extends Model
         });
 
         static::updating(function (Visit $visit): void {
+            if ($visit->getRawOriginal('status') === VisitStatus::Completed->value
+                && $visit->isDirty()) {
+                throw new LogicException('Completed Visits cannot be changed.');
+            }
+
             if ($visit->isDirty('visit_number')) {
                 throw new LogicException('Visit numbers cannot be changed.');
             }
@@ -340,11 +407,21 @@ class Visit extends Model
             if ($visit->isDirty('status')) {
                 $isCheckInTransition = $visit->getRawOriginal('status') === VisitStatus::Created->value
                     && $visit->status === VisitStatus::CheckedIn
-                    && $visit->checkIn()->exists();
+                    && $visit->checkIn()->exists()
+                    && ! $visit->isDirty('completed_at');
+                $isCompletionTransition = self::$completingFromClinicalWorkflow
+                    && $visit->getRawOriginal('status') === VisitStatus::CheckedIn->value
+                    && $visit->status === VisitStatus::Completed
+                    && $visit->completed_at !== null
+                    && array_keys($visit->getDirty()) === ['status', 'completed_at'];
 
-                if (! $isCheckInTransition) {
+                if (! $isCheckInTransition && ! $isCompletionTransition) {
                     throw new LogicException('Visit status can only change through its owning workflow action.');
                 }
+            }
+
+            if ($visit->isDirty('completed_at') && ! $visit->isDirty('status')) {
+                throw new LogicException('Visit completion time can only change through its owning workflow action.');
             }
         });
     }
@@ -362,6 +439,7 @@ class Visit extends Model
         return [
             'occurred_at' => 'immutable_datetime',
             'status' => VisitStatus::class,
+            'completed_at' => 'immutable_datetime',
         ];
     }
 }

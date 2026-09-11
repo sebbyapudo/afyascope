@@ -45,6 +45,8 @@ class Consultation extends Model
     /** @use HasFactory<ConsultationFactory> */
     use HasFactory;
 
+    private static bool $finalizingFromVisitCompletionWorkflow = false;
+
     /** @var array<string, mixed> */
     protected $attributes = [
         'status' => ConsultationStatus::InProgress->value,
@@ -75,6 +77,26 @@ class Consultation extends Model
     public function isFinalized(): bool
     {
         return $this->status === ConsultationStatus::Finalized;
+    }
+
+    public function finalizeFromVisitCompletionWorkflow(Visit $visit, CarbonImmutable $finalizedAt): void
+    {
+        if (! $this->exists
+            || $this->status !== ConsultationStatus::InProgress
+            || $this->visit_id !== $visit->getKey()
+            || $visit->status !== VisitStatus::CheckedIn) {
+            throw new LogicException('Consultation finalization requires its completing checked-in Visit.');
+        }
+
+        self::$finalizingFromVisitCompletionWorkflow = true;
+
+        try {
+            $this->status = ConsultationStatus::Finalized;
+            $this->finalized_at = $finalizedAt;
+            $this->save();
+        } finally {
+            self::$finalizingFromVisitCompletionWorkflow = false;
+        }
     }
 
     protected static function booted(): void
@@ -129,7 +151,15 @@ class Consultation extends Model
             }
 
             if ($consultation->isDirty(['status', 'finalized_at'])) {
-                throw new LogicException('Consultation lifecycle changes require their authoritative workflow action.');
+                $isVisitCompletionTransition = self::$finalizingFromVisitCompletionWorkflow
+                    && $consultation->getRawOriginal('status') === ConsultationStatus::InProgress->value
+                    && $consultation->status === ConsultationStatus::Finalized
+                    && $consultation->finalized_at !== null
+                    && array_keys($consultation->getDirty()) === ['status', 'finalized_at'];
+
+                if (! $isVisitCompletionTransition) {
+                    throw new LogicException('Consultation lifecycle changes require their authoritative workflow action.');
+                }
             }
         });
     }

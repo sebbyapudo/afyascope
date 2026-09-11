@@ -2,13 +2,18 @@
 
 use App\Actions\Audit\RecordAuditLog;
 use App\Actions\Consultations\RecordProcedureDecision;
+use App\Actions\Visits\CompleteVisit;
 use App\AuditAction;
 use App\ConsultationStatus;
 use App\Models\AuditLog;
 use App\Models\Bill;
 use App\Models\Consultation;
+use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureBillingHandoff;
 use App\Models\ProcedureDecision;
+use App\Models\ProcedureRecord;
+use App\Models\RecoveryDischarge;
+use App\Models\RecoveryEpisode;
 use App\Models\ServiceCatalogItem;
 use App\Models\User;
 use App\ProcedureDecisionOutcome;
@@ -109,7 +114,7 @@ it('rejects a finalized Consultation', function () {
         ->and(AuditLog::query()->count())->toBe(0);
 });
 
-it('records no-procedure without a service handoff bill or lifecycle transition', function () {
+it('records no-procedure and completes the consultation Visit without downstream procedure records', function () {
     $doctor = procedureDecisionDoctor();
     $consultation = procedureDecisionConsultation($doctor);
 
@@ -125,10 +130,17 @@ it('records no-procedure without a service handoff bill or lifecycle transition'
         ->and($decision->procedureBillingHandoff)->toBeNull()
         ->and(ProcedureBillingHandoff::query()->count())->toBe(0)
         ->and(Bill::query()->where('type', 'procedure')->count())->toBe(0)
-        ->and($consultation->fresh()->status)->toBe(ConsultationStatus::InProgress)
-        ->and($consultation->visit->fresh()->status)->toBe(VisitStatus::CheckedIn)
-        ->and($consultation->visit->fresh()->workflowMessage())->toBe('No procedure required')
-        ->and(AuditLog::query()->where('action', AuditAction::ConsultationProcedureDecided)->count())->toBe(1);
+        ->and(PreProcedureReadiness::query()->count())->toBe(0)
+        ->and(ProcedureRecord::query()->count())->toBe(0)
+        ->and(RecoveryEpisode::query()->count())->toBe(0)
+        ->and(RecoveryDischarge::query()->count())->toBe(0)
+        ->and($consultation->fresh()->status)->toBe(ConsultationStatus::Finalized)
+        ->and($consultation->fresh()->finalized_at)->not->toBeNull()
+        ->and($consultation->visit->fresh()->status)->toBe(VisitStatus::Completed)
+        ->and($consultation->visit->fresh()->completed_at)->not->toBeNull()
+        ->and($consultation->visit->fresh()->workflowMessage())->toBe('Consultation completed / Completed')
+        ->and(AuditLog::query()->where('action', AuditAction::ConsultationProcedureDecided)->count())->toBe(1)
+        ->and(AuditLog::query()->where('action', AuditAction::VisitCompleted)->count())->toBe(1);
 });
 
 it('requires an active procedure service and explicit confirmation', function (array $attributes) {
@@ -284,7 +296,7 @@ it('rolls back both durable records when audit recording fails', function () {
         ->once()
         ->andThrow(new RuntimeException('Procedure decision audit failed.'));
 
-    expect(fn () => (new RecordProcedureDecision($recordAuditLog))->handle($doctor, $consultation, [
+    expect(fn () => (new RecordProcedureDecision($recordAuditLog, app(CompleteVisit::class)))->handle($doctor, $consultation, [
         'outcome' => 'procedure_required',
         'service_catalog_item_id' => $service->id,
         'confirmed' => true,

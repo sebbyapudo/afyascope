@@ -247,8 +247,9 @@ it('accepts the no-procedure branch without creating downstream procedure record
 
     expect($decision->outcome)->toBe(ProcedureDecisionOutcome::NoProcedure)
         ->and($decision->service_catalog_item_id)->toBeNull()
-        ->and($visit->fresh()->workflowMessage())->toBe('No procedure required')
-        ->and($consultation->fresh()->status)->toBe(ConsultationStatus::InProgress)
+        ->and($visit->fresh()->status)->toBe(VisitStatus::Completed)
+        ->and($visit->fresh()->workflowMessage())->toBe('Consultation completed / Completed')
+        ->and($consultation->fresh()->status)->toBe(ConsultationStatus::Finalized)
         ->and(ProcedureBillingHandoff::query()->where('visit_id', $visit->id)->count())->toBe(0)
         ->and(Bill::query()->where('visit_id', $visit->id)->where('type', BillType::Procedure)->count())->toBe(0)
         ->and(Payment::query()->whereHas('bill', fn ($query) => $query

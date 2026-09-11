@@ -107,6 +107,7 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
                             <dd className="mt-2">
                                 <StatusBadge
                                     tone={
+                                        visit.status.value === 'completed' ||
                                         visit.status.value === 'checked_in'
                                             ? 'success'
                                             : 'info'
@@ -116,6 +117,16 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
                                 </StatusBadge>
                             </dd>
                         </div>
+                        {visit.completedAt ? (
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Completed
+                                </dt>
+                                <dd className="mt-2 text-sm text-text">
+                                    {formatDateTime(visit.completedAt)}
+                                </dd>
+                            </div>
+                        ) : null}
                         {visit.appointment ? (
                             <div>
                                 <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
@@ -222,9 +233,84 @@ export default function ShowVisit({ status, visit }: ShowVisitProps) {
                         </dl>
                     </Panel>
                 ) : null}
-                <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6">
-                    <h2 className="font-semibold text-info">Next handoff</h2>
-                    <p className="mt-1 text-sm text-info">{visit.nextStep}</p>
+                {visit.outcome ? (
+                    <Panel className="p-5 sm:p-6">
+                        <h2 className="text-lg font-semibold text-text">
+                            Clinical outcome
+                        </h2>
+                        <dl className="mt-4 grid gap-x-8 gap-y-5 sm:grid-cols-2">
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Procedure decision
+                                </dt>
+                                <dd className="mt-2 text-sm text-text">
+                                    {visit.outcome.procedureName ??
+                                        visit.outcome.label}
+                                </dd>
+                            </div>
+                            <div>
+                                <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                    Responsible Doctor
+                                </dt>
+                                <dd className="mt-2 text-sm text-text">
+                                    {visit.clinicalActors.doctor?.name ??
+                                        'Not recorded'}
+                                </dd>
+                            </div>
+                            {visit.discharge ? (
+                                <>
+                                    <div>
+                                        <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                            Discharge
+                                        </dt>
+                                        <dd className="mt-2 text-sm text-text tabular-nums">
+                                            {visit.discharge.dischargeNumber} ·{' '}
+                                            {formatDateTime(
+                                                visit.discharge.dischargedAt,
+                                            )}
+                                        </dd>
+                                    </div>
+                                    <div>
+                                        <dt className="text-xs font-semibold tracking-wide text-text-secondary uppercase">
+                                            Responsible Nurse
+                                        </dt>
+                                        <dd className="mt-2 text-sm text-text">
+                                            {visit.clinicalActors.nurse?.name ??
+                                                'Not recorded'}
+                                        </dd>
+                                    </div>
+                                </>
+                            ) : null}
+                        </dl>
+                    </Panel>
+                ) : null}
+                <Panel
+                    className={
+                        visit.status.value === 'completed'
+                            ? 'border-success-border bg-success-soft p-5 shadow-none sm:p-6'
+                            : 'border-info-border bg-info-soft p-5 shadow-none sm:p-6'
+                    }
+                >
+                    <h2
+                        className={
+                            visit.status.value === 'completed'
+                                ? 'font-semibold text-success'
+                                : 'font-semibold text-info'
+                        }
+                    >
+                        {visit.status.value === 'completed'
+                            ? 'Final workflow state'
+                            : 'Next handoff'}
+                    </h2>
+                    <p
+                        className={
+                            visit.status.value === 'completed'
+                                ? 'mt-1 text-sm text-success'
+                                : 'mt-1 text-sm text-info'
+                        }
+                    >
+                        {visit.nextStep}
+                    </p>
                 </Panel>
             </PageContainer>
         </>

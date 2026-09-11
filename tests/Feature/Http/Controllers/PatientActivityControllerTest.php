@@ -2,6 +2,7 @@
 
 use App\Actions\Audit\RecordAuditLog;
 use App\Actions\Clinical\ResolveRecoveryEscalation;
+use App\Actions\Consultations\RecordProcedureDecision;
 use App\Actions\Nursing\AssessRecoveryReadiness;
 use App\Actions\Nursing\DischargeRecovery;
 use App\AuditAction;
@@ -18,6 +19,7 @@ use App\Models\RecoveryEscalation;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitCheckIn;
+use App\ProcedureDecisionOutcome;
 use App\RecoveryEscalationResolution;
 use App\StaffRole;
 use Illuminate\Database\Eloquent\Model;
@@ -154,6 +156,30 @@ it('keeps a Doctors completed procedure trackable and out of active procedure qu
     expect(Gate::forUser($doctor)->allows('recovery.manage'))->toBeFalse();
 });
 
+it('tracks the Doctors terminal no-procedure Visit without creating a Nursing activity', function () {
+    $doctor = User::factory()->forRole(StaffRole::Doctor)->create();
+    $consultation = Consultation::factory()->for($doctor, 'doctor')->create();
+    app(RecordProcedureDecision::class)->handle($doctor, $consultation, [
+        'outcome' => ProcedureDecisionOutcome::NoProcedure->value,
+        'confirmed' => true,
+    ]);
+    $visit = $consultation->visit->fresh();
+
+    $this->actingAs($doctor)
+        ->get(route('patient-activity.index', ['activity' => 'consultation']))
+        ->assertInertia(fn (Assert $page) => $page
+            ->where('activities.data.0.visit.visitNumber', $visit->visit_number)
+            ->where('activities.data.0.visit.currentStage', 'Consultation completed / Completed')
+            ->where('activities.data.0.activity.label', 'Visit completed')
+            ->where('activities.data.0.activity.reference', $visit->visit_number)
+            ->where('activities.data.0.destination', [
+                'type' => 'visit',
+                'id' => $visit->id,
+            ])
+            ->missing('activities.data.0.recovery')
+            ->missing('activities.data.0.discharge'));
+});
+
 it('tracks completed Nurse readiness after downstream progress without Doctor write authority', function () {
     $doctor = User::factory()->forRole(StaffRole::Doctor)->create();
     $nurse = User::factory()->forRole(StaffRole::Nurse)->create();
@@ -268,12 +294,12 @@ it('tracks Nurse discharge attribution and final stage without exposing discharg
         ->get(route('patient-activity.index', ['activity' => 'recovery']))
         ->assertInertia(fn (Assert $page) => $page
             ->has('activities.data', 1)
-            ->where('activities.data.0.visit.currentStage', 'Discharged')
-            ->where('activities.data.0.activity.label', 'Patient discharged from recovery')
-            ->where('activities.data.0.activity.reference', $discharge->discharge_number)
+            ->where('activities.data.0.visit.currentStage', 'Discharged / Completed')
+            ->where('activities.data.0.activity.label', 'Visit completed')
+            ->where('activities.data.0.activity.reference', $context['visit']->visit_number)
             ->where('activities.data.0.destination', [
-                'type' => 'recovery',
-                'id' => $context['recovery']->id,
+                'type' => 'visit',
+                'id' => $context['visit']->id,
             ])
             ->missing('activities.data.0.conditionSummary')
             ->missing('activities.data.0.nursingNote')

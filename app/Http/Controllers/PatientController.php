@@ -215,22 +215,26 @@ class PatientController extends Controller
     }
 
     /**
-     * @return array{data: list<array{id: int, visitNumber: string, occurredAt: string, status: array{value: string, label: string}, nextStep: string}>, pagination: array{currentPage: int, from: int|null, lastPage: int, nextPageUrl: string|null, pageName: string, perPage: int, previousPageUrl: string|null, to: int|null, total: int}}
+     * @return array{data: list<array<string, mixed>>, pagination: array{currentPage: int, from: int|null, lastPage: int, nextPageUrl: string|null, pageName: string, perPage: int, previousPageUrl: string|null, to: int|null, total: int}}
      */
     private function visitHistory(Patient $patient): array
     {
         $visits = Visit::query()
             ->whereBelongsTo($patient)
-            ->select(['id', 'patient_id', 'visit_number', 'occurred_at', 'status'])
+            ->select(['id', 'patient_id', 'visit_number', 'occurred_at', 'status', 'completed_at'])
             ->with('consultationBill:id,visit_id,type')
             ->with('consultationBill.payment:id,bill_id')
             ->with('consultationBill.financialClearance:id,bill_id')
-            ->with('consultation:id,visit_id,status')
-            ->with('procedureDecision:id,visit_id,outcome')
+            ->with('consultation:id,visit_id,doctor_user_id,status,finalized_at')
+            ->with('consultation.doctor:id,name')
+            ->with('procedureDecision:id,visit_id,service_catalog_item_id,outcome,decided_at')
+            ->with('procedureDecision.serviceCatalogItem:id,name')
             ->with('preProcedureReadiness:id,visit_id,status')
             ->with('procedureRecord:id,visit_id,status')
-            ->with('recoveryEpisode:id,visit_id,status')
+            ->with('recoveryEpisode:id,visit_id,nurse_user_id,status,completed_at')
             ->with('recoveryEpisode.openEscalation:id,recovery_episode_id,open_marker')
+            ->with('recoveryEpisode.discharge:id,recovery_episode_id,discharged_by_user_id,discharge_number,discharged_at')
+            ->with('recoveryEpisode.discharge.dischargedBy:id,name')
             ->with('procedureBill:id,visit_id,type')
             ->with('procedureBill.payment:id,bill_id')
             ->with('procedureBill.payment.receipt:id,payment_id')
@@ -248,11 +252,30 @@ class PatientController extends Controller
                         'id' => $visit->id,
                         'visitNumber' => $visit->visit_number,
                         'occurredAt' => $visit->occurred_at->toIso8601String(),
+                        'completedAt' => $visit->completed_at?->toIso8601String(),
                         'status' => [
                             'value' => $visit->status->value,
                             'label' => $visit->status->displayName(),
                         ],
                         'nextStep' => $visit->workflowMessage(),
+                        'outcome' => $visit->procedureDecision === null ? null : [
+                            'value' => $visit->procedureDecision->outcome->value,
+                            'label' => $visit->procedureDecision->outcome->displayName(),
+                            'procedureName' => $visit->procedureDecision->serviceCatalogItem?->name,
+                            'decidedAt' => $visit->procedureDecision->decided_at->toIso8601String(),
+                        ],
+                        'clinicalActors' => [
+                            'doctor' => $visit->consultation?->doctor === null
+                                ? null
+                                : ['name' => $visit->consultation->doctor->name],
+                            'nurse' => $visit->recoveryEpisode?->discharge?->dischargedBy === null
+                                ? null
+                                : ['name' => $visit->recoveryEpisode->discharge->dischargedBy->name],
+                        ],
+                        'discharge' => $visit->recoveryEpisode?->discharge === null ? null : [
+                            'dischargeNumber' => $visit->recoveryEpisode->discharge->discharge_number,
+                            'dischargedAt' => $visit->recoveryEpisode->discharge->discharged_at->toIso8601String(),
+                        ],
                     ])
                     ->all(),
             ),

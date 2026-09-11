@@ -276,6 +276,7 @@ class ListPatientActivity
             $this->procedureEvent($actor, AuditAction::ProcedureDocumentationUpdated),
             $this->procedureEvent($actor, AuditAction::ProcedureCompleted),
             $this->recoveryEscalationEvent($actor, AuditAction::RecoveryEscalationResolved),
+            $this->visitEvent($actor, AuditAction::VisitCompleted, 'consultation', 'visit'),
         ];
     }
 
@@ -290,6 +291,7 @@ class ListPatientActivity
             $this->recoveryReadinessEvent($actor),
             $this->recoveryEscalationEvent($actor, AuditAction::RecoveryEscalated),
             $this->recoveryDischargeEvent($actor),
+            $this->visitEvent($actor, AuditAction::VisitCompleted, 'recovery', 'visit'),
         ];
     }
 

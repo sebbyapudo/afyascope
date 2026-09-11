@@ -3,6 +3,7 @@
 namespace App\Actions\Consultations;
 
 use App\Actions\Audit\RecordAuditLog;
+use App\Actions\Visits\CompleteVisit;
 use App\AuditAction;
 use App\BillType;
 use App\ConsultationStatus;
@@ -25,7 +26,10 @@ use Illuminate\Validation\ValidationException;
 
 class RecordProcedureDecision
 {
-    public function __construct(private RecordAuditLog $recordAuditLog) {}
+    public function __construct(
+        private RecordAuditLog $recordAuditLog,
+        private CompleteVisit $completeVisit,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $attributes
@@ -141,6 +145,10 @@ class RecordProcedureDecision
                     'service_catalog_item_id' => $serviceCatalogItem?->getKey(),
                 ],
             );
+
+            if ($outcome === ProcedureDecisionOutcome::NoProcedure) {
+                $this->completeVisit->afterNoProcedureDecision($lockedActor, $decision);
+            }
 
             return $decision->load([
                 'consultation:id,visit_id,doctor_user_id,consultation_number,status',

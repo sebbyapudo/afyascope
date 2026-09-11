@@ -35,6 +35,7 @@ enum AuditAction: string
     case RecoveryEscalated = 'recovery.escalated';
     case RecoveryEscalationResolved = 'recovery.escalation_resolved';
     case RecoveryDischarged = 'recovery.discharged';
+    case VisitCompleted = 'visit.completed';
 
     public function displayName(): string
     {
@@ -70,6 +71,7 @@ enum AuditAction: string
             self::RecoveryEscalated => 'Recovery escalated',
             self::RecoveryEscalationResolved => 'Recovery escalation resolved',
             self::RecoveryDischarged => 'Patient discharged from recovery',
+            self::VisitCompleted => 'Visit completed',
         };
     }
 }

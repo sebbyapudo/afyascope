@@ -1,13 +1,16 @@
 <?php
 
+use App\Actions\Consultations\RecordProcedureDecision;
 use App\AppointmentStatus;
 use App\AuditAction;
 use App\Models\Appointment;
 use App\Models\AuditLog;
+use App\Models\Consultation;
 use App\Models\Patient;
 use App\Models\User;
 use App\Models\Visit;
 use App\PatientSex;
+use App\ProcedureDecisionOutcome;
 use App\StaffRole;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Route;
@@ -488,8 +491,15 @@ it('exposes only existing administrative facts in Patient histories', function (
                     'id' => $visit->id,
                     'visitNumber' => $visit->visit_number,
                     'occurredAt' => '2026-08-30T10:30:00+00:00',
+                    'completedAt' => null,
                     'status' => ['value' => 'created', 'label' => 'Created'],
                     'nextStep' => 'Awaiting consultation billing',
+                    'outcome' => null,
+                    'clinicalActors' => [
+                        'doctor' => null,
+                        'nurse' => null,
+                    ],
+                    'discharge' => null,
                 ])
                 ->where('upcomingAppointments.data.0', [
                     'id' => $appointment->id,
@@ -516,6 +526,34 @@ it('exposes only existing administrative facts in Patient histories', function (
                 ->missing('pastUnresolvedAppointments.data.0.billing')
             );
     });
+});
+
+it('retains a completed no-procedure Visit in the Patient timeline without clinical narrative leakage', function () {
+    $doctor = User::factory()->forRole(StaffRole::Doctor)->create(['name' => 'Dr Miriam Otieno']);
+    $consultation = Consultation::factory()->for($doctor, 'doctor')->create();
+    $decision = app(RecordProcedureDecision::class)->handle($doctor, $consultation, [
+        'outcome' => ProcedureDecisionOutcome::NoProcedure->value,
+        'clinical_rationale' => 'Sensitive rationale must not enter the administrative timeline.',
+        'confirmed' => true,
+    ]);
+    $visit = $consultation->visit->fresh();
+
+    $this->actingAs(patientRegistryReceptionist())
+        ->get(route('patients.show', $visit->patient))
+        ->assertInertia(fn (Assert $page) => $page
+            ->has('visitHistory.data', 1)
+            ->where('visitHistory.data.0.id', $visit->id)
+            ->where('visitHistory.data.0.status.value', 'completed')
+            ->where('visitHistory.data.0.completedAt', $decision->decided_at->toIso8601String())
+            ->where('visitHistory.data.0.nextStep', 'Consultation completed / Completed')
+            ->where('visitHistory.data.0.outcome.value', 'no_procedure')
+            ->where('visitHistory.data.0.outcome.procedureName', null)
+            ->where('visitHistory.data.0.clinicalActors.doctor.name', 'Dr Miriam Otieno')
+            ->where('visitHistory.data.0.clinicalActors.nurse', null)
+            ->where('visitHistory.data.0.discharge', null)
+            ->missing('visitHistory.data.0.outcome.clinicalRationale')
+            ->missing('visitHistory.data.0.consultation')
+            ->missing('visitHistory.data.0.audit'));
 });
 
 it('updates normalized Patient demographics through HTTP and audits meaningful changes', function () {
