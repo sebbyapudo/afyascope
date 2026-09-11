@@ -6,6 +6,19 @@ use App\StaffPermission;
 use App\StaffRole;
 use Illuminate\Support\Facades\Gate;
 
+test('only Administrator receives service catalog configuration authority', function (StaffRole $role, bool $allowed) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->allows(StaffPermission::ServicesManage))->toBe($allowed);
+})->with([
+    'Administrator' => [StaffRole::Administrator, true],
+    'Receptionist' => [StaffRole::Receptionist, false],
+    'Accountant' => [StaffRole::Accountant, false],
+    'Doctor' => [StaffRole::Doctor, false],
+    'Nurse' => [StaffRole::Nurse, false],
+    'Management' => [StaffRole::Management, false],
+]);
+
 test('all six staff roles can pass the dashboard gate', function (StaffRole $role) {
     $user = User::factory()->forRole($role)->create();
 

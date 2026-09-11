@@ -56,6 +56,13 @@ class ServiceCatalogItem extends Model
         return $this->hasMany(ProcedureDecision::class);
     }
 
+    public function hasHistoricalUsage(): bool
+    {
+        return $this->billItems()->exists()
+            || $this->procedureBillingHandoffs()->exists()
+            || $this->procedureDecisions()->exists();
+    }
+
     /**
      * @return array<string, string>
      */

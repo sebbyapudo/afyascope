@@ -15,6 +15,7 @@ import { index as procedurePreparationIndex } from '@/routes/nursing/pre-procedu
 import { index as recoveryIndex } from '@/routes/nursing/recovery';
 import { index as patientActivityIndex } from '@/routes/patient-activity';
 import { index as patientIndex } from '@/routes/patients';
+import { index as serviceCatalogIndex } from '@/routes/service-catalog';
 import { index as staffIndex } from '@/routes/staff';
 import { index as visitIndex } from '@/routes/visits';
 import type { Capabilities } from '@/types';
@@ -163,6 +164,12 @@ export function navigationItems(
             href: patientActivityIndex(),
             label: 'Patient tracking',
             visible: capabilities.viewPatientActivity,
+        },
+        {
+            active: isCurrentPath(currentUrl, serviceCatalogIndex.url(), true),
+            href: serviceCatalogIndex(),
+            label: 'Service Catalog',
+            visible: capabilities.manageServiceCatalog,
         },
         {
             active: isCurrentPath(currentUrl, staffIndex.url(), true),

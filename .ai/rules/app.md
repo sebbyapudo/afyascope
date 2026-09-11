@@ -36,3 +36,6 @@ BeginConsultation requires an active Doctor, a checked_in Visit, a persisted Vis
 
 ## Consultation assessment stays within the active Doctor-owned record
 Clinical assessment fields live directly on Consultation and may be changed only through UpdateConsultationAssessment while the record is in_progress by its responsible active Doctor. Normalize optional empty text to null; never copy clinical narratives into audit data (record only references and changed field names). Assessment updates do not change Consultation/Visit lifecycle or create ProcedureBillingHandoff; finalized Consultations remain immutable.
+
+## Service catalog is authoritative and non-destructive
+ServiceCatalogItem is the single catalog for consultation and procedure pricing. Only Administrators configure it; operational workflows may select only active items. Never delete referenced items or rewrite BillItem description/amount snapshots; deactivate instead, and do not change a referenced item's category.

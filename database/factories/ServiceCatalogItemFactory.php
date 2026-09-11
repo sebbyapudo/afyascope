@@ -19,7 +19,7 @@ class ServiceCatalogItemFactory extends Factory
     public function definition(): array
     {
         return [
-            'name' => 'Consultation',
+            'name' => 'Consultation '.fake()->unique()->numerify('#####'),
             'category' => BillType::Consultation,
             'is_active' => true,
             'unit_price_minor' => fake()->numberBetween(10_000, 500_000),
@@ -29,7 +29,7 @@ class ServiceCatalogItemFactory extends Factory
     public function procedure(): static
     {
         return $this->state(fn (): array => [
-            'name' => 'Procedure',
+            'name' => 'Procedure '.fake()->unique()->numerify('#####'),
             'category' => BillType::Procedure,
         ]);
     }

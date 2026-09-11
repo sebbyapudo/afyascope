@@ -76,6 +76,7 @@ test('permission checks follow the canonical role mappings', function () {
         ->and($administrator->hasPermission(StaffPermission::UsersManage))->toBeTrue()
         ->and($administrator->hasPermission(StaffPermission::RolesView))->toBeTrue()
         ->and($administrator->hasPermission(StaffPermission::AuditView))->toBeTrue()
+        ->and($administrator->hasPermission(StaffPermission::ServicesManage))->toBeTrue()
         ->and($management->hasPermission(StaffPermission::DashboardView))->toBeTrue()
         ->and($management->hasPermission(StaffPermission::AuditView))->toBeTrue()
         ->and($management->hasPermission(StaffPermission::UsersView))->toBeFalse()

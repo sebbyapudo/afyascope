@@ -9,5 +9,6 @@ export type * from './patient-activity';
 export type * from './pre-procedure-readiness';
 export type * from './procedure-record';
 export type * from './recovery';
+export type * from './service-catalog';
 export type * from './staff';
 export type * from './visit';

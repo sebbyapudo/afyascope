@@ -9,6 +9,7 @@ enum StaffPermission: string
     case UsersManage = 'users.manage';
     case RolesView = 'roles.view';
     case AuditView = 'audit.view';
+    case ServicesManage = 'services.manage';
     case PatientsCreate = 'patients.create';
     case PatientsView = 'patients.view';
     case PatientsUpdate = 'patients.update';
@@ -42,6 +43,7 @@ enum StaffPermission: string
             self::UsersManage => 'Manage staff users',
             self::RolesView => 'View roles',
             self::AuditView => 'View audit log',
+            self::ServicesManage => 'Manage services and pricing',
             self::PatientsCreate => 'Register patients',
             self::PatientsView => 'View patients',
             self::PatientsUpdate => 'Update patient demographics',

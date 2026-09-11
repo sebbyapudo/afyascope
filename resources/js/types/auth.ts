@@ -15,6 +15,7 @@ export type Capabilities = {
     manageUsers: boolean;
     viewRoles: boolean;
     viewAudit: boolean;
+    manageServiceCatalog: boolean;
     viewPatients: boolean;
     createPatients: boolean;
     updatePatients: boolean;

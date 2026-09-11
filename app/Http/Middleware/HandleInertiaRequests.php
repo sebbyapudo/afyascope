@@ -12,6 +12,7 @@ use App\Models\ProcedureRecord;
 use App\Models\RecoveryEpisode;
 use App\Models\RecoveryEscalation;
 use App\Models\Role;
+use App\Models\ServiceCatalogItem;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitCheckIn;
@@ -74,6 +75,7 @@ class HandleInertiaRequests extends Middleware
                     'manageUsers' => $user?->can('create', User::class) ?? false,
                     'viewRoles' => $user?->can('viewAny', Role::class) ?? false,
                     'viewAudit' => $user?->can(StaffPermission::AuditView) ?? false,
+                    'manageServiceCatalog' => $user?->can('viewAny', ServiceCatalogItem::class) ?? false,
                     'viewPatients' => $user?->can('viewAny', Patient::class) ?? false,
                     'createPatients' => $user?->can('create', Patient::class) ?? false,
                     'updatePatients' => $user?->can(StaffPermission::PatientsUpdate) ?? false,

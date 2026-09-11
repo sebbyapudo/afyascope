@@ -28,6 +28,8 @@ use App\Http\Controllers\RecoveryEpisodeController;
 use App\Http\Controllers\RecoveryEscalationController;
 use App\Http\Controllers\RecoveryObservationController;
 use App\Http\Controllers\RecoveryReadinessAssessmentController;
+use App\Http\Controllers\ServiceCatalogItemController;
+use App\Http\Controllers\ServiceCatalogItemStatusController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitCheckInController;
 use App\Http\Controllers\VisitController;
@@ -42,6 +44,7 @@ use App\Models\PreProcedureReadiness;
 use App\Models\ProcedureRecord;
 use App\Models\RecoveryEpisode;
 use App\Models\RecoveryEscalation;
+use App\Models\ServiceCatalogItem;
 use App\Models\User;
 use App\Models\Visit;
 use App\Models\VisitCheckIn;
@@ -54,6 +57,28 @@ Route::get('/dashboard', DashboardController::class)
     ->name('dashboard');
 
 Route::middleware('auth')->group(function (): void {
+    Route::get('/administration/services', [ServiceCatalogItemController::class, 'index'])
+        ->can('viewAny', ServiceCatalogItem::class)
+        ->name('service-catalog.index');
+    Route::get('/administration/services/create', [ServiceCatalogItemController::class, 'create'])
+        ->can('create', ServiceCatalogItem::class)
+        ->name('service-catalog.create');
+    Route::post('/administration/services', [ServiceCatalogItemController::class, 'store'])
+        ->can('create', ServiceCatalogItem::class)
+        ->name('service-catalog.store');
+    Route::get('/administration/services/{serviceCatalogItem}', [ServiceCatalogItemController::class, 'show'])
+        ->can('view', 'serviceCatalogItem')
+        ->name('service-catalog.show');
+    Route::get('/administration/services/{serviceCatalogItem}/edit', [ServiceCatalogItemController::class, 'edit'])
+        ->can('update', 'serviceCatalogItem')
+        ->name('service-catalog.edit');
+    Route::put('/administration/services/{serviceCatalogItem}', [ServiceCatalogItemController::class, 'update'])
+        ->can('update', 'serviceCatalogItem')
+        ->name('service-catalog.update');
+    Route::patch('/administration/services/{serviceCatalogItem}/status', ServiceCatalogItemStatusController::class)
+        ->can('update', 'serviceCatalogItem')
+        ->name('service-catalog.status.update');
+
     Route::get('/patient-activity', PatientActivityController::class)
         ->middleware('can:patient-activity.view')
         ->name('patient-activity.index');
