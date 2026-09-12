@@ -1,16 +1,35 @@
-import { Head } from '@inertiajs/react';
-import { ActionLink } from '@/components/ui/button';
+import { Form, Head, Link } from '@inertiajs/react';
+import { ActionLink, Button, textLinkStyles } from '@/components/ui/button';
 import { EmptyState } from '@/components/ui/empty-state';
+import { formControlStyles } from '@/components/ui/form-field';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
+import { StatusBadge } from '@/components/ui/status-badge';
 import AuthenticatedLayout from '@/layouts/authenticated-layout';
-import { index } from '@/routes/audit-logs';
-import type { AuditChange, AuditLogPage, AuditValue } from '@/types';
+import { formatMinorAmount } from '@/lib/money';
+import { index, show } from '@/routes/audit-logs';
+import type {
+    AuditChange,
+    AuditFilterOption,
+    AuditLogFilters,
+    AuditLogPage,
+    AuditValue,
+} from '@/types';
 
 type AuditLogIndexProps = {
     auditLogs: AuditLogPage;
+    events: AuditFilterOption[];
+    filters: AuditLogFilters;
+    subjectTypes: AuditFilterOption[];
 };
+
+function formatDateTime(value: string): string {
+    return new Intl.DateTimeFormat(undefined, {
+        dateStyle: 'medium',
+        timeStyle: 'short',
+    }).format(new Date(value));
+}
 
 function formatAuditValue(field: string, value: AuditValue): string {
     if (value === null) {
@@ -21,70 +40,267 @@ function formatAuditValue(field: string, value: AuditValue): string {
         return value ? 'Active' : 'Disabled';
     }
 
-    if (typeof value === 'object' && !Array.isArray(value)) {
-        const displayName = value.name;
-
-        if (typeof displayName === 'string') {
-            return displayName;
-        }
-
-        return Object.values(value).map(String).join(', ');
+    if (typeof value === 'boolean') {
+        return value ? 'Yes' : 'No';
     }
 
-    if (Array.isArray(value)) {
-        return value.map(String).join(', ');
+    if (
+        (field === 'amount_minor' || field === 'unit_price_minor') &&
+        typeof value === 'number'
+    ) {
+        return `KES ${formatMinorAmount(value)}`;
     }
 
-    return String(value);
+    if (
+        typeof value === 'string' &&
+        (field.endsWith('_at') || field === 'scheduled_at')
+    ) {
+        return formatDateTime(value);
+    }
+
+    return String(value).replaceAll('_', ' ');
 }
 
-function ChangeSummary({ changes }: { changes: AuditChange[] }) {
+function changeSummary(changes: AuditChange[]): string {
     if (changes.length === 0) {
-        return <span className="text-text-secondary">Event recorded</span>;
+        return 'Significant event recorded';
     }
 
-    return (
-        <dl className="grid gap-2">
-            {changes.map((change) => (
-                <div key={change.field}>
-                    <dt className="font-medium text-text">{change.label}</dt>
-                    <dd className="mt-0.5 text-xs text-text-secondary">
-                        <span>
-                            {formatAuditValue(change.field, change.before)}
-                        </span>
-                        <span
-                            aria-hidden="true"
-                            className="px-2 text-text-muted"
-                        >
-                            →
-                        </span>
-                        <span>
-                            {formatAuditValue(change.field, change.after)}
-                        </span>
-                    </dd>
-                </div>
-            ))}
-        </dl>
-    );
+    return changes
+        .slice(0, 2)
+        .map((change) => {
+            const before = formatAuditValue(change.field, change.before);
+            const after = formatAuditValue(change.field, change.after);
+
+            if (change.before === null) {
+                return `${change.label}: ${after}`;
+            }
+
+            if (change.after === null) {
+                return `${change.label}: removed`;
+            }
+
+            return `${change.label}: ${before} → ${after}`;
+        })
+        .join(' · ');
 }
 
-export default function AuditLogIndex({ auditLogs }: AuditLogIndexProps) {
+export default function AuditLogIndex({
+    auditLogs,
+    events,
+    filters,
+    subjectTypes,
+}: AuditLogIndexProps) {
     const { data, pagination } = auditLogs;
+    const hasFilters = Boolean(
+        filters.q ||
+        filters.event ||
+        filters.actor ||
+        filters.subjectType ||
+        filters.subjectReference ||
+        filters.dateFrom ||
+        filters.dateTo,
+    );
+    const paginationQuery = {
+        q: filters.q,
+        event: filters.event,
+        actor: filters.actor,
+        subject_type: filters.subjectType,
+        subject_reference: filters.subjectReference,
+        date_from: filters.dateFrom,
+        date_to: filters.dateTo,
+    };
 
     return (
         <>
-            <Head title="Audit history" />
+            <Head title="Audit Log" />
             <PageContainer width="wide">
                 <PageHeader
-                    description="Read-only history of important administrative changes."
-                    title="Audit history"
+                    description="Review immutable records of significant administrative, financial, and care-workflow events."
+                    title="Audit Log"
                 />
+
+                <Panel className="p-5 sm:p-6">
+                    <Form {...index.form()}>
+                        {({ processing }) => (
+                            <div className="grid gap-4">
+                                <div className="grid gap-4 lg:grid-cols-3">
+                                    <div>
+                                        <label
+                                            className="text-sm font-medium text-text"
+                                            htmlFor="audit-q"
+                                        >
+                                            General search
+                                        </label>
+                                        <input
+                                            className={formControlStyles}
+                                            defaultValue={filters.q}
+                                            id="audit-q"
+                                            name="q"
+                                            placeholder="Event, actor, or reference"
+                                            type="search"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label
+                                            className="text-sm font-medium text-text"
+                                            htmlFor="audit-event"
+                                        >
+                                            Event
+                                        </label>
+                                        <select
+                                            className={formControlStyles}
+                                            defaultValue={filters.event ?? ''}
+                                            id="audit-event"
+                                            name="event"
+                                        >
+                                            <option value="">All events</option>
+                                            {events.map((event) => (
+                                                <option
+                                                    key={event.value}
+                                                    value={event.value}
+                                                >
+                                                    {event.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label
+                                            className="text-sm font-medium text-text"
+                                            htmlFor="audit-actor"
+                                        >
+                                            Actor
+                                        </label>
+                                        <input
+                                            className={formControlStyles}
+                                            defaultValue={filters.actor}
+                                            id="audit-actor"
+                                            name="actor"
+                                            placeholder="Name or email"
+                                            type="search"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-[14rem_minmax(0,1fr)_11rem_11rem_auto] lg:items-end">
+                                    <div>
+                                        <label
+                                            className="text-sm font-medium text-text"
+                                            htmlFor="audit-subject-type"
+                                        >
+                                            Record type
+                                        </label>
+                                        <select
+                                            className={formControlStyles}
+                                            defaultValue={
+                                                filters.subjectType ?? ''
+                                            }
+                                            id="audit-subject-type"
+                                            name="subject_type"
+                                        >
+                                            <option value="">
+                                                All record types
+                                            </option>
+                                            {subjectTypes.map((subjectType) => (
+                                                <option
+                                                    key={subjectType.value}
+                                                    value={subjectType.value}
+                                                >
+                                                    {subjectType.label}
+                                                </option>
+                                            ))}
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label
+                                            className="text-sm font-medium text-text"
+                                            htmlFor="audit-subject-reference"
+                                        >
+                                            Record reference
+                                        </label>
+                                        <input
+                                            className={formControlStyles}
+                                            defaultValue={
+                                                filters.subjectReference
+                                            }
+                                            id="audit-subject-reference"
+                                            name="subject_reference"
+                                            placeholder="VIS-000001, BILL-000001…"
+                                            type="search"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label
+                                            className="text-sm font-medium text-text"
+                                            htmlFor="audit-date-from"
+                                        >
+                                            From date
+                                        </label>
+                                        <input
+                                            className={formControlStyles}
+                                            defaultValue={
+                                                filters.dateFrom ?? ''
+                                            }
+                                            id="audit-date-from"
+                                            name="date_from"
+                                            type="date"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label
+                                            className="text-sm font-medium text-text"
+                                            htmlFor="audit-date-to"
+                                        >
+                                            To date
+                                        </label>
+                                        <input
+                                            className={formControlStyles}
+                                            defaultValue={filters.dateTo ?? ''}
+                                            id="audit-date-to"
+                                            name="date_to"
+                                            type="date"
+                                        />
+                                    </div>
+                                    <div className="flex gap-2">
+                                        <Button
+                                            disabled={processing}
+                                            type="submit"
+                                        >
+                                            Filter
+                                        </Button>
+                                        <ActionLink
+                                            href={index()}
+                                            variant="secondary"
+                                        >
+                                            Clear
+                                        </ActionLink>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </Form>
+                </Panel>
 
                 <Panel className="overflow-hidden">
                     {data.length === 0 ? (
                         <EmptyState
-                            description="Important administrative changes will appear here after they are recorded."
-                            title="No audit events recorded"
+                            action={
+                                hasFilters ? (
+                                    <ActionLink
+                                        href={index()}
+                                        variant="secondary"
+                                    >
+                                        Clear filters
+                                    </ActionLink>
+                                ) : undefined
+                            }
+                            description={
+                                hasFilters
+                                    ? 'No audit events match the current filters.'
+                                    : 'Significant business and system events will appear here after they are recorded.'
+                            }
+                            title="No audit events found"
                         />
                     ) : (
                         <div className="overflow-x-auto">
@@ -95,16 +311,22 @@ export default function AuditLogIndex({ auditLogs }: AuditLogIndexProps) {
                                             Time
                                         </th>
                                         <th className="px-5 py-4" scope="col">
+                                            Event
+                                        </th>
+                                        <th className="px-5 py-4" scope="col">
                                             Actor
                                         </th>
                                         <th className="px-5 py-4" scope="col">
+                                            Record
+                                        </th>
+                                        <th className="px-5 py-4" scope="col">
+                                            Safe context
+                                        </th>
+                                        <th
+                                            className="px-5 py-4 text-right"
+                                            scope="col"
+                                        >
                                             Action
-                                        </th>
-                                        <th className="px-5 py-4" scope="col">
-                                            Affected record
-                                        </th>
-                                        <th className="px-5 py-4" scope="col">
-                                            Changes
                                         </th>
                                     </tr>
                                 </thead>
@@ -115,44 +337,52 @@ export default function AuditLogIndex({ auditLogs }: AuditLogIndexProps) {
                                             key={auditLog.id}
                                         >
                                             <td className="px-5 py-4 whitespace-nowrap text-text-secondary tabular-nums">
-                                                {new Intl.DateTimeFormat(
-                                                    undefined,
-                                                    {
-                                                        dateStyle: 'medium',
-                                                        timeStyle: 'short',
-                                                    },
-                                                ).format(
-                                                    new Date(
-                                                        auditLog.occurredAt,
-                                                    ),
+                                                {formatDateTime(
+                                                    auditLog.occurredAt,
                                                 )}
+                                            </td>
+                                            <td className="px-5 py-4">
+                                                <p className="font-medium text-text">
+                                                    {auditLog.action.label}
+                                                </p>
+                                                <p className="mt-1 font-mono text-xs text-text-muted">
+                                                    {auditLog.action.value}
+                                                </p>
                                             </td>
                                             <td className="px-5 py-4">
                                                 <p className="font-medium text-text">
                                                     {auditLog.actor?.name ??
                                                         'System / bootstrap'}
                                                 </p>
-                                                <p className="mt-1 text-xs text-text-secondary">
-                                                    {auditLog.actor?.email ??
-                                                        'No authenticated actor'}
-                                                </p>
-                                            </td>
-                                            <td className="px-5 py-4 text-text">
-                                                {auditLog.action.label}
+                                                {auditLog.actor &&
+                                                !auditLog.actor.isActive ? (
+                                                    <StatusBadge className="mt-1">
+                                                        Account disabled
+                                                    </StatusBadge>
+                                                ) : null}
                                             </td>
                                             <td className="px-5 py-4">
                                                 <p className="font-medium text-text">
-                                                    {auditLog.subject.label}
+                                                    {auditLog.subject
+                                                        .reference ??
+                                                        `${auditLog.subject.type} record #${auditLog.subject.internalId}`}
                                                 </p>
                                                 <p className="mt-1 text-xs text-text-secondary">
-                                                    {auditLog.subject.type} #
-                                                    {auditLog.subject.id}
+                                                    {auditLog.subject.type}
                                                 </p>
                                             </td>
-                                            <td className="min-w-72 px-5 py-4">
-                                                <ChangeSummary
-                                                    changes={auditLog.changes}
-                                                />
+                                            <td className="max-w-sm px-5 py-4 text-text-secondary">
+                                                {changeSummary(
+                                                    auditLog.changes,
+                                                )}
+                                            </td>
+                                            <td className="px-5 py-4 text-right">
+                                                <Link
+                                                    className={textLinkStyles}
+                                                    href={show(auditLog.id)}
+                                                >
+                                                    Review
+                                                </Link>
                                             </td>
                                         </tr>
                                     ))}
@@ -168,13 +398,14 @@ export default function AuditLogIndex({ auditLogs }: AuditLogIndexProps) {
                                 {pagination.total}
                             </p>
                             <nav
-                                aria-label="Audit history pagination"
+                                aria-label="Audit Log pagination"
                                 className="flex items-center gap-2"
                             >
                                 {pagination.currentPage > 1 ? (
                                     <ActionLink
                                         href={index({
                                             query: {
+                                                ...paginationQuery,
                                                 page:
                                                     pagination.currentPage - 1,
                                             },
@@ -190,6 +421,7 @@ export default function AuditLogIndex({ auditLogs }: AuditLogIndexProps) {
                                     <ActionLink
                                         href={index({
                                             query: {
+                                                ...paginationQuery,
                                                 page:
                                                     pagination.currentPage + 1,
                                             },

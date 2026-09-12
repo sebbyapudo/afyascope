@@ -299,6 +299,9 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/audit-logs', [AuditLogController::class, 'index'])
         ->can('viewAny', AuditLog::class)
         ->name('audit-logs.index');
+    Route::get('/audit-logs/{auditLog}', [AuditLogController::class, 'show'])
+        ->can('view', 'auditLog')
+        ->name('audit-logs.show');
 
     Route::get('/staff', [StaffUserController::class, 'index'])
         ->can('viewAny', User::class)

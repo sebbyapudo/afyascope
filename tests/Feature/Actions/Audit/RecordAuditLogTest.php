@@ -89,3 +89,14 @@ it('guards historical audit attributes from mass assignment', function () {
         'subject_id' => 1,
     ]))->toThrow(MassAssignmentException::class);
 });
+
+it('prevents existing audit records from being updated or deleted through the model', function () {
+    $auditLog = AuditLog::factory()->create();
+
+    expect(function () use ($auditLog): void {
+        $auditLog->action = AuditAction::StaffCreated;
+        $auditLog->save();
+    })->toThrow(LogicException::class, 'Audit records are immutable.')
+        ->and(fn () => $auditLog->fresh()->delete())
+        ->toThrow(LogicException::class, 'Audit records are immutable.');
+});
