@@ -77,10 +77,12 @@ enum StaffRole: string
                 StaffPermission::RolesView,
                 StaffPermission::AuditView,
                 StaffPermission::ServicesManage,
+                StaffPermission::ReportsManagementView,
             ],
             self::Management => [
                 StaffPermission::DashboardView,
                 StaffPermission::AuditView,
+                StaffPermission::ReportsManagementView,
             ],
         };
     }
