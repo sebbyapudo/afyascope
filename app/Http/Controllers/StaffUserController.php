@@ -9,9 +9,11 @@ use App\Http\Requests\UpdateStaffUserRequest;
 use App\Models\Role;
 use App\Models\User;
 use App\StaffRole;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 use Inertia\Response;
 use LogicException;
@@ -23,17 +25,54 @@ class StaffUserController extends Controller
      */
     public function index(Request $request): Response
     {
+        $filters = $request->validate([
+            'q' => ['nullable', 'string', 'max:100'],
+            'role' => ['nullable', Rule::enum(StaffRole::class)],
+            'status' => ['nullable', Rule::in(['active', 'inactive'])],
+        ]);
+        $search = trim((string) ($filters['q'] ?? ''));
+        $roleFilter = $filters['role'] ?? null;
+        $statusFilter = $filters['status'] ?? null;
+
         $staffUsers = User::query()
+            ->when($search !== '', function (Builder $query) use ($search): void {
+                $query->where(function (Builder $query) use ($search): void {
+                    $query->where('name', 'like', "%{$search}%")
+                        ->orWhere('email', 'like', "%{$search}%");
+                });
+            })
+            ->when(is_string($roleFilter), function (Builder $query) use ($roleFilter): void {
+                $query->whereHas('role', fn (Builder $query) => $query->where('slug', $roleFilter));
+            })
+            ->when($statusFilter === 'active', fn (Builder $query) => $query->where('is_active', true))
+            ->when($statusFilter === 'inactive', fn (Builder $query) => $query->where('is_active', false))
             ->with('role:id,slug,name')
             ->orderBy('name')
             ->orderBy('id')
-            ->get(['id', 'role_id', 'name', 'email', 'is_active'])
-            ->map(fn (User $staffUser): array => $this->staffUserData($staffUser));
+            ->paginate(15)
+            ->withQueryString();
 
         $status = $request->session()->get('status');
 
         return Inertia::render('staff/index', [
-            'staffUsers' => $staffUsers,
+            'staffUsers' => [
+                'data' => $staffUsers->getCollection()
+                    ->map(fn (User $staffUser): array => $this->staffUserData($staffUser))
+                    ->values(),
+                'pagination' => [
+                    'currentPage' => $staffUsers->currentPage(),
+                    'from' => $staffUsers->firstItem(),
+                    'lastPage' => $staffUsers->lastPage(),
+                    'to' => $staffUsers->lastItem(),
+                    'total' => $staffUsers->total(),
+                ],
+            ],
+            'filters' => [
+                'q' => $search,
+                'role' => is_string($roleFilter) ? $roleFilter : null,
+                'status' => is_string($statusFilter) ? $statusFilter : null,
+            ],
+            'roles' => $this->roleOptions(),
             'status' => is_string($status) ? $status : null,
         ]);
     }
@@ -45,6 +84,21 @@ class StaffUserController extends Controller
     {
         return Inertia::render('staff/create', [
             'roles' => $this->roleOptions(),
+        ]);
+    }
+
+    /**
+     * Display the specified staff account.
+     */
+    public function show(Request $request, User $staffUser): Response
+    {
+        $staffUser->loadMissing('role:id,slug,name');
+
+        return Inertia::render('staff/show', [
+            'staffUser' => $this->staffUserDetailData($staffUser),
+            'status' => is_string($request->session()->get('status'))
+                ? $request->session()->get('status')
+                : null,
         ]);
     }
 
@@ -75,7 +129,7 @@ class StaffUserController extends Controller
         $staffUser->loadMissing('role:id,slug,name');
 
         return Inertia::render('staff/edit', [
-            'staffUser' => $this->staffUserData($staffUser),
+            'staffUser' => $this->staffUserDetailData($staffUser),
             'roles' => $this->roleOptions(),
         ]);
     }
@@ -123,6 +177,31 @@ class StaffUserController extends Controller
             ],
             'isActive' => $staffUser->is_active,
         ];
+    }
+
+    /**
+     * @return array{id: int, name: string, email: string, role: array{slug: string, displayName: string}, isActive: bool, createdAt: string, updatedAt: string, isFinalActiveAdministrator: bool}
+     */
+    private function staffUserDetailData(User $staffUser): array
+    {
+        return [
+            ...$this->staffUserData($staffUser),
+            'createdAt' => $staffUser->created_at?->toIso8601String() ?? '',
+            'updatedAt' => $staffUser->updated_at?->toIso8601String() ?? '',
+            'isFinalActiveAdministrator' => $this->isFinalActiveAdministrator($staffUser),
+        ];
+    }
+
+    private function isFinalActiveAdministrator(User $staffUser): bool
+    {
+        if (! $staffUser->is_active || $staffUser->role->slug !== StaffRole::Administrator->value) {
+            return false;
+        }
+
+        return User::query()
+            ->where('role_id', $staffUser->role_id)
+            ->where('is_active', true)
+            ->count() === 1;
     }
 
     /**

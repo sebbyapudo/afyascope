@@ -309,6 +309,9 @@ Route::middleware('auth')->group(function (): void {
     Route::post('/staff', [StaffUserController::class, 'store'])
         ->can('create', User::class)
         ->name('staff.store');
+    Route::get('/staff/{staffUser}', [StaffUserController::class, 'show'])
+        ->can('view', 'staffUser')
+        ->name('staff.show');
     Route::get('/staff/{staffUser}/edit', [StaffUserController::class, 'edit'])
         ->can('update', 'staffUser')
         ->name('staff.edit');

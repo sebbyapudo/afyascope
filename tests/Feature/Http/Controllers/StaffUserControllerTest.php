@@ -22,8 +22,8 @@ it('allows an Administrator to list staff with minimal identity role and status 
         ->get(route('staff.index'))
         ->assertInertia(fn (Assert $page) => $page
             ->component('staff/index')
-            ->has('staffUsers', 2)
-            ->where('staffUsers.1', [
+            ->has('staffUsers.data', 2)
+            ->where('staffUsers.data.1', [
                 'id' => $staffUser->id,
                 'name' => 'Staff Member',
                 'email' => 'staff.member@example.com',
@@ -32,6 +32,47 @@ it('allows an Administrator to list staff with minimal identity role and status 
                     'displayName' => StaffRole::Nurse->displayName(),
                 ],
                 'isActive' => true,
+            ])
+            ->where('staffUsers.pagination.total', 2)
+            ->where('filters', [
+                'q' => '',
+                'role' => null,
+                'status' => null,
+            ])
+            ->where('roles', canonicalRoleOptions())
+        );
+});
+
+it('searches and filters the paginated staff registry deterministically', function () {
+    $administrator = checkpointAdministrator();
+    User::factory()->forRole(StaffRole::Doctor)->create([
+        'name' => 'Zuri Active Doctor',
+        'email' => 'zuri.doctor@example.com',
+    ]);
+    User::factory()->forRole(StaffRole::Doctor)->inactive()->create([
+        'name' => 'Amina Disabled Doctor',
+        'email' => 'amina.doctor@example.com',
+    ]);
+    User::factory()->forRole(StaffRole::Nurse)->inactive()->create([
+        'name' => 'Zuri Disabled Nurse',
+        'email' => 'zuri.nurse@example.com',
+    ]);
+
+    $this->actingAs($administrator)
+        ->get(route('staff.index', [
+            'q' => 'ZURI',
+            'role' => StaffRole::Doctor->value,
+            'status' => 'active',
+        ]))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('staff/index')
+            ->has('staffUsers.data', 1)
+            ->where('staffUsers.data.0.name', 'Zuri Active Doctor')
+            ->where('staffUsers.pagination.total', 1)
+            ->where('filters', [
+                'q' => 'ZURI',
+                'role' => StaffRole::Doctor->value,
+                'status' => 'active',
             ])
         );
 });
@@ -180,7 +221,29 @@ it('allows an Administrator to access the edit page', function () {
             ->where('staffUser.id', $staffUser->id)
             ->where('staffUser.role.slug', StaffRole::Accountant->value)
             ->where('staffUser.isActive', true)
+            ->where('staffUser.isFinalActiveAdministrator', false)
             ->where('roles', canonicalRoleOptions())
+        );
+});
+
+it('allows an Administrator to view safe staff-account detail and final-admin protection state', function () {
+    $administrator = checkpointAdministrator();
+
+    $this->actingAs($administrator)
+        ->get(route('staff.show', $administrator))
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('staff/show')
+            ->where('staffUser.id', $administrator->id)
+            ->where('staffUser.name', $administrator->name)
+            ->where('staffUser.email', $administrator->email)
+            ->where('staffUser.role.slug', StaffRole::Administrator->value)
+            ->where('staffUser.isActive', true)
+            ->where('staffUser.isFinalActiveAdministrator', true)
+            ->has('staffUser.createdAt')
+            ->has('staffUser.updatedAt')
+            ->missing('staffUser.password')
+            ->missing('staffUser.remember_token')
+            ->missing('staffUser.role.permissions')
         );
 });
 
@@ -258,6 +321,7 @@ it('forbids every non-Administrator role from staff administration', function (S
 
     $this->actingAs($actor)->get(route('staff.index'))->assertForbidden();
     $this->actingAs($actor)->get(route('staff.create'))->assertForbidden();
+    $this->actingAs($actor)->get(route('staff.show', $staffUser))->assertForbidden();
     $this->actingAs($actor)->get(route('staff.edit', $staffUser))->assertForbidden();
     $this->actingAs($actor)
         ->post(route('staff.store'), validStaffPayload(['email' => 'forbidden.create@example.com']))
@@ -282,6 +346,7 @@ it('redirects guests away from staff administration', function () {
     $staffUser = User::factory()->create();
 
     $this->get(route('staff.index'))->assertRedirect(route('login'));
+    $this->get(route('staff.show', $staffUser))->assertRedirect(route('login'));
     $this->post(route('staff.store'), validStaffPayload())->assertRedirect(route('login'));
     $this->put(route('staff.update', $staffUser), validStaffPayload())->assertRedirect(route('login'));
 });

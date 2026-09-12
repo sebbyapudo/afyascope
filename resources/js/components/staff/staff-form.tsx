@@ -7,6 +7,7 @@ import type { RouteFormDefinition } from '@/wayfinder';
 
 type StaffFormProps = {
     form: RouteFormDefinition<'post'>;
+    protectAdministratorAccess?: boolean;
     roles: RoleOption[];
     staffUser?: StaffUser;
     submitLabel: string;
@@ -14,6 +15,7 @@ type StaffFormProps = {
 
 export function StaffForm({
     form,
+    protectAdministratorAccess = false,
     roles,
     staffUser,
     submitLabel,
@@ -71,6 +73,13 @@ export function StaffForm({
                             label="Staff role"
                             required
                         >
+                            {protectAdministratorAccess ? (
+                                <input
+                                    name="role"
+                                    type="hidden"
+                                    value={staffUser?.role.slug}
+                                />
+                            ) : null}
                             <select
                                 aria-describedby={
                                     errors.role ? 'role-error' : undefined
@@ -83,6 +92,7 @@ export function StaffForm({
                                 id="role"
                                 name="role"
                                 required
+                                disabled={protectAdministratorAccess}
                             >
                                 {roles.map((role) => (
                                     <option key={role.value} value={role.value}>
@@ -97,6 +107,13 @@ export function StaffForm({
                             id="is_active"
                             label="Account status"
                         >
+                            {protectAdministratorAccess ? (
+                                <input
+                                    name="is_active"
+                                    type="hidden"
+                                    value="1"
+                                />
+                            ) : null}
                             <select
                                 aria-describedby={
                                     errors.is_active
@@ -110,6 +127,7 @@ export function StaffForm({
                                 }
                                 id="is_active"
                                 name="is_active"
+                                disabled={protectAdministratorAccess}
                             >
                                 <option value="1">Active</option>
                                 <option value="0">Disabled</option>

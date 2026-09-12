@@ -19,4 +19,5 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/{Actions/Procedures,Models,Policies,Http/Controllers}/** | .ai/rules/procedures-models-policies-http-controllers.md |
 | app/{Actions/Nursing,Models,Http/Controllers,Http/Requests}/**/*.php | .ai/rules/requests.md |
 | resources/** | .ai/rules/resources.md |
+| app/Actions/Staff/** | .ai/rules/staff.md |
 | app/{Actions/Consultations,Actions/Nursing,Actions/Visits,Models}/**/*.php | .ai/rules/visits-models.md |

@@ -4,10 +4,17 @@ namespace App\Actions\Staff;
 
 use App\Actions\Audit\RecordAuditLog;
 use App\AuditAction;
+use App\ConsultationStatus;
+use App\Models\Consultation;
+use App\Models\PreProcedureReadiness;
+use App\Models\RecoveryEpisode;
 use App\Models\Role;
 use App\Models\User;
+use App\PreProcedureReadinessStatus;
+use App\RecoveryEpisodeStatus;
 use App\StaffRole;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 
 class UpdateStaffUser
@@ -19,6 +26,8 @@ class UpdateStaffUser
      */
     public function handle(User $actor, User $staffUser, array $attributes): User
     {
+        Gate::forUser($actor)->authorize('update', $staffUser);
+
         return DB::transaction(function () use ($actor, $staffUser, $attributes): User {
             $administratorRole = Role::query()
                 ->where('slug', StaffRole::Administrator->value)
@@ -45,6 +54,12 @@ class UpdateStaffUser
                     $attributes['is_active'] ? 'role' : 'is_active' => 'The last active Administrator cannot be deactivated or assigned another role.',
                 ]);
             }
+
+            $this->ensureActiveWorkflowOwnershipRemainsOperable(
+                $lockedStaffUser,
+                $targetRole,
+                $attributes['is_active'],
+            );
 
             $beforeValues = [];
             $afterValues = [];
@@ -86,7 +101,51 @@ class UpdateStaffUser
             }
 
             return $lockedStaffUser->refresh();
-        });
+        }, attempts: 3);
+    }
+
+    private function ensureActiveWorkflowOwnershipRemainsOperable(
+        User $staffUser,
+        Role $targetRole,
+        bool $willRemainActive,
+    ): void {
+        $validationKey = $willRemainActive ? 'role' : 'is_active';
+        $willRemainDoctor = $willRemainActive && $targetRole->slug === StaffRole::Doctor->value;
+
+        if (! $willRemainDoctor && Consultation::query()
+            ->whereBelongsTo($staffUser, 'doctor')
+            ->where('status', ConsultationStatus::InProgress)
+            ->lockForUpdate()
+            ->first() instanceof Consultation) {
+            throw ValidationException::withMessages([
+                $validationKey => 'This staff member is responsible for an in-progress Consultation and must remain an active Doctor.',
+            ]);
+        }
+
+        $willRemainNurse = $willRemainActive && $targetRole->slug === StaffRole::Nurse->value;
+
+        if (! $willRemainNurse && PreProcedureReadiness::query()
+            ->whereBelongsTo($staffUser, 'nurse')
+            ->where('status', PreProcedureReadinessStatus::InPreparation)
+            ->lockForUpdate()
+            ->first() instanceof PreProcedureReadiness) {
+            throw ValidationException::withMessages([
+                $validationKey => 'This staff member owns an in-progress pre-procedure preparation and must remain an active Nurse.',
+            ]);
+        }
+
+        if (! $willRemainNurse && RecoveryEpisode::query()
+            ->whereBelongsTo($staffUser, 'nurse')
+            ->whereIn('status', [
+                RecoveryEpisodeStatus::InProgress,
+                RecoveryEpisodeStatus::ReadyForDischarge,
+            ])
+            ->lockForUpdate()
+            ->first() instanceof RecoveryEpisode) {
+            throw ValidationException::withMessages([
+                $validationKey => 'This staff member owns an active recovery episode and must remain an active Nurse.',
+            ]);
+        }
     }
 
     private function anotherActiveAdministratorExists(Role $administratorRole, User $staffUser): bool

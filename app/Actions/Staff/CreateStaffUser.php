@@ -8,6 +8,7 @@ use App\Models\Role;
 use App\Models\User;
 use App\StaffRole;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Password;
 use Illuminate\Support\Str;
@@ -22,6 +23,8 @@ class CreateStaffUser
      */
     public function handle(User $actor, array $attributes): User
     {
+        Gate::forUser($actor)->authorize('create', User::class);
+
         return DB::transaction(function () use ($actor, $attributes): User {
             $staffRole = StaffRole::from($attributes['role']);
             $role = Role::query()->where('slug', $staffRole->value)->sole();
