@@ -38,11 +38,10 @@ class UpdateServiceCatalogItemRequest extends FormRequest
                     ->ignore($this->route('serviceCatalogItem')),
             ],
             'category' => ['required', Rule::enum(BillType::class)],
-            'unit_price' => ['required', 'decimal:0,2', 'min:0.01', 'max:9999999999999999.99'],
         ];
     }
 
-    /** @return array{name: string, category: string, unit_price_minor: int} */
+    /** @return array{name: string, category: string} */
     public function serviceAttributes(): array
     {
         $validated = $this->validated();
@@ -50,7 +49,6 @@ class UpdateServiceCatalogItemRequest extends FormRequest
         return [
             'name' => (string) $validated['name'],
             'category' => (string) $validated['category'],
-            'unit_price_minor' => $this->priceMinor((string) $validated['unit_price']),
         ];
     }
 
@@ -59,14 +57,6 @@ class UpdateServiceCatalogItemRequest extends FormRequest
         $this->merge([
             'name' => $this->string('name')->trim()->toString(),
             'category' => $this->string('category')->trim()->lower()->toString(),
-            'unit_price' => $this->string('unit_price')->trim()->toString(),
         ]);
-    }
-
-    private function priceMinor(string $price): int
-    {
-        [$whole, $fraction] = array_pad(explode('.', $price, 2), 2, '');
-
-        return ((int) $whole * 100) + (int) str_pad($fraction, 2, '0');
     }
 }

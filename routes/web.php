@@ -29,6 +29,7 @@ use App\Http\Controllers\RecoveryEscalationController;
 use App\Http\Controllers\RecoveryObservationController;
 use App\Http\Controllers\RecoveryReadinessAssessmentController;
 use App\Http\Controllers\ServiceCatalogItemController;
+use App\Http\Controllers\ServiceCatalogItemPriceController;
 use App\Http\Controllers\ServiceCatalogItemStatusController;
 use App\Http\Controllers\StaffUserController;
 use App\Http\Controllers\VisitCheckInController;
@@ -75,6 +76,9 @@ Route::middleware('auth')->group(function (): void {
     Route::put('/administration/services/{serviceCatalogItem}', [ServiceCatalogItemController::class, 'update'])
         ->can('update', 'serviceCatalogItem')
         ->name('service-catalog.update');
+    Route::patch('/administration/services/{serviceCatalogItem}/price', ServiceCatalogItemPriceController::class)
+        ->can('update', 'serviceCatalogItem')
+        ->name('service-catalog.price.update');
     Route::patch('/administration/services/{serviceCatalogItem}/status', ServiceCatalogItemStatusController::class)
         ->can('update', 'serviceCatalogItem')
         ->name('service-catalog.status.update');

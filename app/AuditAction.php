@@ -38,6 +38,7 @@ enum AuditAction: string
     case VisitCompleted = 'visit.completed';
     case ServiceCreated = 'service.created';
     case ServiceUpdated = 'service.updated';
+    case ServicePriceUpdated = 'service.price_updated';
     case ServiceActivated = 'service.activated';
     case ServiceDeactivated = 'service.deactivated';
 
@@ -78,6 +79,7 @@ enum AuditAction: string
             self::VisitCompleted => 'Visit completed',
             self::ServiceCreated => 'Service created',
             self::ServiceUpdated => 'Service updated',
+            self::ServicePriceUpdated => 'Service price updated',
             self::ServiceActivated => 'Service activated',
             self::ServiceDeactivated => 'Service deactivated',
         };

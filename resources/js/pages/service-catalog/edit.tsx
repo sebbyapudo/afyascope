@@ -27,7 +27,7 @@ export default function EditService({ categories, service }: EditServiceProps) {
                             Back to service details
                         </Link>
                     }
-                    description="Update the service name or current price without rewriting historical transactions."
+                    description="Update the service name or category. Current pricing is managed separately on the service details page."
                     title={`Edit ${service.name}`}
                 />
                 <Panel className="p-5 sm:p-8">

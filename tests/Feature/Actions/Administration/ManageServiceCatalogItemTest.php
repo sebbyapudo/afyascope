@@ -43,7 +43,7 @@ it('creates an active catalog service and safe audit event atomically', function
         ]);
 });
 
-it('updates current configuration without rewriting historical Bill item snapshots', function () {
+it('updates current catalog identity without rewriting historical Bill item snapshots', function () {
     $administrator = User::factory()->forRole(StaffRole::Administrator)->create();
     $service = ServiceCatalogItem::factory()->create([
         'name' => 'Original consultation',
@@ -57,11 +57,10 @@ it('updates current configuration without rewriting historical Bill item snapsho
     $updated = app(UpdateServiceCatalogItem::class)->handle($administrator, $service, [
         'name' => 'Updated consultation',
         'category' => BillType::Consultation->value,
-        'unit_price_minor' => 125_000,
     ]);
 
     expect($updated->name)->toBe('Updated consultation')
-        ->and($updated->unit_price_minor)->toBe(125_000)
+        ->and($updated->unit_price_minor)->toBe(100_000)
         ->and($billItem->fresh()->description)->toBe('Original consultation')
         ->and($billItem->fresh()->amount_minor)->toBe(100_000);
 
@@ -69,11 +68,9 @@ it('updates current configuration without rewriting historical Bill item snapsho
     expect($audit->action)->toBe(AuditAction::ServiceUpdated)
         ->and($audit->before_values)->toBe([
             'name' => 'Original consultation',
-            'unit_price_minor' => 100_000,
         ])
         ->and($audit->after_values)->toBe([
             'name' => 'Updated consultation',
-            'unit_price_minor' => 125_000,
         ]);
 });
 
@@ -88,7 +85,6 @@ it('locks category after historical use while keeping the referenced service rea
     expect(fn () => app(UpdateServiceCatalogItem::class)->handle($administrator, $service, [
         'name' => $service->name,
         'category' => BillType::Procedure->value,
-        'unit_price_minor' => $service->unit_price_minor,
     ]))->toThrow(ValidationException::class);
 
     expect($service->fresh()->category)->toBe(BillType::Consultation)
@@ -144,7 +140,6 @@ it('does not audit a no-op current configuration update', function () {
     app(UpdateServiceCatalogItem::class)->handle($administrator, $service, [
         'name' => $service->name,
         'category' => $service->category->value,
-        'unit_price_minor' => $service->unit_price_minor,
     ]);
 
     expect(AuditLog::query()->count())->toBe(0);
@@ -162,7 +157,6 @@ it('enforces Administrator authorization at each catalog action boundary', funct
         ->and(fn () => app(UpdateServiceCatalogItem::class)->handle($actor, $service, [
             'name' => 'Forbidden update',
             'category' => $service->category->value,
-            'unit_price_minor' => $service->unit_price_minor,
         ]))->toThrow(AuthorizationException::class)
         ->and(fn () => app(SetServiceCatalogItemActiveState::class)->handle(
             $actor,

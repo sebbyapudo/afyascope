@@ -1,4 +1,5 @@
 import { Form, Head, Link } from '@inertiajs/react';
+import { ServiceCatalogItemPriceForm } from '@/components/service-catalog/service-catalog-item-price-form';
 import { ActionLink, Button, textLinkStyles } from '@/components/ui/button';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
@@ -147,6 +148,8 @@ export default function ShowService({
                         </Form>
                     </Panel>
                 </div>
+
+                <ServiceCatalogItemPriceForm service={service} />
 
                 <Panel className="p-5 sm:p-6">
                     <h2 className="text-lg font-semibold text-text">

@@ -176,7 +176,7 @@ it('updates current configuration and changes availability without deleting the 
 
     expect($service->fresh()->name)->toBe('Revised service')
         ->and($service->fresh()->category)->toBe(BillType::Procedure)
-        ->and($service->fresh()->unit_price_minor)->toBe(125_050)
+        ->and($service->fresh()->unit_price_minor)->toBe(100_000)
         ->and($service->fresh()->is_active)->toBeTrue();
 
     $this->actingAs($administrator)
@@ -209,6 +209,7 @@ it('forbids all other roles from every catalog URL', function (StaffRole $role) 
     $this->actingAs($actor)->get(route('service-catalog.edit', $service))->assertForbidden();
     $this->actingAs($actor)->post(route('service-catalog.store'), [])->assertForbidden();
     $this->actingAs($actor)->put(route('service-catalog.update', $service), [])->assertForbidden();
+    $this->actingAs($actor)->patch(route('service-catalog.price.update', $service), [])->assertForbidden();
     $this->actingAs($actor)
         ->patch(route('service-catalog.status.update', $service), ['is_active' => false])
         ->assertForbidden();
@@ -229,6 +230,7 @@ it('redirects guests and denies inactive Administrators', function () {
 
     $this->get(route('service-catalog.index'))->assertRedirect(route('login'));
     $this->post(route('service-catalog.store'), [])->assertRedirect(route('login'));
+    $this->patch(route('service-catalog.price.update', $service), [])->assertRedirect(route('login'));
     $this->actingAs($inactiveAdministrator)
         ->get(route('service-catalog.show', $service))
         ->assertRedirect(route('login'));

@@ -89,37 +89,32 @@ export function ServiceCatalogItemForm({
                             </select>
                         </FormField>
 
-                        <FormField
-                            error={errors.unit_price}
-                            hint="Enter the current price in Kenya shillings, with up to two decimal places. Historical Bill items keep their original snapshots."
-                            id="unit_price"
-                            label="Price (KES)"
-                            required
-                        >
-                            <input
-                                aria-describedby={
-                                    errors.unit_price
-                                        ? 'unit_price-error'
-                                        : 'unit_price-hint'
-                                }
-                                aria-invalid={Boolean(errors.unit_price)}
-                                className={formControlStyles}
-                                defaultValue={
-                                    service
-                                        ? (
-                                              service.unitPriceMinor / 100
-                                          ).toFixed(2)
-                                        : undefined
-                                }
+                        {!service ? (
+                            <FormField
+                                error={errors.unit_price}
+                                hint="Enter the initial price in Kenya shillings, with up to two decimal places."
                                 id="unit_price"
-                                inputMode="decimal"
-                                min="0.01"
-                                name="unit_price"
+                                label="Initial price (KES)"
                                 required
-                                step="0.01"
-                                type="number"
-                            />
-                        </FormField>
+                            >
+                                <input
+                                    aria-describedby={
+                                        errors.unit_price
+                                            ? 'unit_price-error'
+                                            : 'unit_price-hint'
+                                    }
+                                    aria-invalid={Boolean(errors.unit_price)}
+                                    className={formControlStyles}
+                                    id="unit_price"
+                                    inputMode="decimal"
+                                    min="0.01"
+                                    name="unit_price"
+                                    required
+                                    step="0.01"
+                                    type="number"
+                                />
+                            </FormField>
+                        ) : null}
                     </div>
 
                     <div className="flex flex-wrap items-center justify-end gap-3 border-t border-border pt-6">

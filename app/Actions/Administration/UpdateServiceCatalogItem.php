@@ -15,7 +15,7 @@ class UpdateServiceCatalogItem
 {
     public function __construct(private RecordAuditLog $recordAuditLog) {}
 
-    /** @param array{name: string, category: string, unit_price_minor: int} $attributes */
+    /** @param array{name: string, category: string} $attributes */
     public function handle(User $actor, ServiceCatalogItem $service, array $attributes): ServiceCatalogItem
     {
         Gate::forUser($actor)->authorize('update', $service);
@@ -39,7 +39,6 @@ class UpdateServiceCatalogItem
             foreach ([
                 'name' => $attributes['name'],
                 'category' => $category->value,
-                'unit_price_minor' => $attributes['unit_price_minor'],
             ] as $field => $value) {
                 $currentValue = $field === 'category'
                     ? $lockedService->category->value
@@ -57,7 +56,6 @@ class UpdateServiceCatalogItem
 
             $lockedService->name = $attributes['name'];
             $lockedService->category = $category;
-            $lockedService->unit_price_minor = $attributes['unit_price_minor'];
             $lockedService->save();
 
             $this->recordAuditLog->handle(
