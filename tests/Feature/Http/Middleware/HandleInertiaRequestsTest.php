@@ -52,6 +52,7 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'viewPatientActivity' => false,
                 'viewOperationalReports' => true,
                 'viewFinancialReports' => true,
+                'viewClinicalReports' => true,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -98,6 +99,7 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'viewPatientActivity' => false,
                 'viewOperationalReports' => false,
                 'viewFinancialReports' => false,
+                'viewClinicalReports' => false,
             ])
         );
 });
@@ -136,6 +138,7 @@ test('Receptionist Inertia responses expose only the Patient capabilities grante
             ->where('auth.capabilities.viewPatientActivity', true)
             ->where('auth.capabilities.viewOperationalReports', true)
             ->where('auth.capabilities.viewFinancialReports', false)
+            ->where('auth.capabilities.viewClinicalReports', false)
         );
 });
 
@@ -168,6 +171,7 @@ test('Accountant Inertia responses expose only the billing capabilities granted 
             ->where('auth.capabilities.viewPatientActivity', true)
             ->where('auth.capabilities.viewOperationalReports', false)
             ->where('auth.capabilities.viewFinancialReports', true)
+            ->where('auth.capabilities.viewClinicalReports', false)
         );
 });
 
@@ -200,6 +204,7 @@ test('Doctor Inertia responses expose only the consultation capabilities granted
             ->where('auth.capabilities.viewPatientActivity', true)
             ->where('auth.capabilities.viewOperationalReports', false)
             ->where('auth.capabilities.viewFinancialReports', false)
+            ->where('auth.capabilities.viewClinicalReports', true)
         );
 });
 
@@ -219,6 +224,7 @@ test('Nurse Inertia responses expose only the Nursing preparation capability', f
             ->where('auth.capabilities.viewPatientActivity', true)
             ->where('auth.capabilities.viewOperationalReports', false)
             ->where('auth.capabilities.viewFinancialReports', false)
+            ->where('auth.capabilities.viewClinicalReports', false)
             ->where('auth.capabilities.viewBilling', false)
             ->where('auth.capabilities.createBilling', false)
             ->where('auth.capabilities.viewPayments', false)

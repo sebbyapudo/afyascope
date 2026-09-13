@@ -54,3 +54,40 @@ export type FinancialReport = {
         financialClearanceCount: number;
     };
 };
+
+export type ClinicalProcedureDistribution = {
+    procedureName: string;
+    procedureRequiredDecisions: number;
+    proceduresCompleted: number;
+};
+
+export type ClinicalProcedureReport = {
+    period: OperationalReportPeriod;
+    consultationDecision: {
+        consultationsStarted: number;
+        procedureRequired: number;
+        noProcedure: number;
+    };
+    procedure: {
+        started: number;
+        completed: number;
+    };
+    preparation: {
+        started: number;
+        completed: number;
+    };
+    recovery: {
+        started: number;
+        completed: number;
+        discharged: number;
+    };
+    escalation: {
+        raised: number;
+        resolved: number;
+    };
+    terminalOutcomes: {
+        procedurePathVisitsCompleted: number;
+        noProcedureVisitsCompleted: number;
+    };
+    procedureDistribution: ClinicalProcedureDistribution[];
+};

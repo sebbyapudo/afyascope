@@ -15,6 +15,7 @@ import { index as procedurePreparationIndex } from '@/routes/nursing/pre-procedu
 import { index as recoveryIndex } from '@/routes/nursing/recovery';
 import { index as patientActivityIndex } from '@/routes/patient-activity';
 import { index as patientIndex } from '@/routes/patients';
+import { index as clinicalReportIndex } from '@/routes/reports/clinical';
 import { index as financialReportIndex } from '@/routes/reports/financial';
 import { index as operationalReportIndex } from '@/routes/reports/operational';
 import { index as serviceCatalogIndex } from '@/routes/service-catalog';
@@ -178,6 +179,12 @@ export function navigationItems(
             href: financialReportIndex(),
             label: 'Financial Report',
             visible: capabilities.viewFinancialReports,
+        },
+        {
+            active: isCurrentPath(currentUrl, clinicalReportIndex.url()),
+            href: clinicalReportIndex(),
+            label: 'Clinical / Procedure Report',
+            visible: capabilities.viewClinicalReports,
         },
         {
             active: isCurrentPath(currentUrl, serviceCatalogIndex.url(), true),

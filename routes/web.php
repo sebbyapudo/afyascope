@@ -6,6 +6,7 @@ use App\Http\Controllers\AppointmentNoShowController;
 use App\Http\Controllers\AppointmentVisitController;
 use App\Http\Controllers\AuditLogController;
 use App\Http\Controllers\BillController;
+use App\Http\Controllers\ClinicalProcedureReportController;
 use App\Http\Controllers\CompletePreProcedureReadinessController;
 use App\Http\Controllers\CompleteProcedureRecordController;
 use App\Http\Controllers\ConsultationBillingController;
@@ -96,6 +97,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reports/financial', FinancialReportController::class)
         ->middleware('can:reports.financial.view')
         ->name('reports.financial.index');
+
+    Route::get('/reports/clinical', ClinicalProcedureReportController::class)
+        ->middleware('can:reports.clinical.view')
+        ->name('reports.clinical.index');
 
     Route::get('/clinical/procedures', [ProcedureRecordController::class, 'index'])
         ->can('viewAny', ProcedureRecord::class)

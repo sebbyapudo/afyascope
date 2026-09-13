@@ -73,6 +73,19 @@ test('Accountant Administrator and Management receive financial reporting access
     'Management' => [StaffRole::Management, true],
 ]);
 
+test('Doctor Administrator and Management receive clinical reporting access', function (StaffRole $role, bool $allowed) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->allows(StaffPermission::ReportsClinicalView))->toBe($allowed);
+})->with([
+    'Receptionist' => [StaffRole::Receptionist, false],
+    'Accountant' => [StaffRole::Accountant, false],
+    'Doctor' => [StaffRole::Doctor, true],
+    'Nurse' => [StaffRole::Nurse, false],
+    'Administrator' => [StaffRole::Administrator, true],
+    'Management' => [StaffRole::Management, true],
+]);
+
 test('operational roles do not receive audit visibility', function (StaffRole $role) {
     $user = User::factory()->forRole($role)->create();
 

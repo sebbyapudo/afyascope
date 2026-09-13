@@ -36,6 +36,7 @@ enum StaffPermission: string
     case PatientActivityView = 'patient-activity.view';
     case ReportsOperationalView = 'reports.operational.view';
     case ReportsFinancialView = 'reports.financial.view';
+    case ReportsClinicalView = 'reports.clinical.view';
     case ReportsManagementView = 'reports.management.view';
 
     public function displayName(): string
@@ -73,6 +74,7 @@ enum StaffPermission: string
             self::PatientActivityView => 'View personal Patient activity',
             self::ReportsOperationalView => 'View operational reports',
             self::ReportsFinancialView => 'View financial reports',
+            self::ReportsClinicalView => 'View clinical and procedure reports',
             self::ReportsManagementView => 'View management reporting',
         };
     }

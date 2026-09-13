@@ -13,3 +13,6 @@ Every report builder authorizes its own report permission at the query boundary.
 
 ## Financial report event cohorts and immutable amounts
 Financial reporting is authorized by reports.financial.view for active Accountant, Administrator, and Management users only. Compute billed Bill cohorts by bills.created_at using immutable bill_items.amount_minor snapshots; payments by payments.recorded_at, receipts by receipts.issued_at, and clearances by financial_clearances.granted_at. Outstanding is the current balance of Bills created in the selected period, net of their persisted authoritative Payment regardless of payment date, so billed minus in-period paid activity is not expected to equal outstanding.
+
+## Clinical report event cohorts and catalog labels
+Clinical/procedure reports count each lifecycle event by its own authoritative event timestamp and expose aggregate-only data. Procedure distribution is grouped by durable service_catalog_item_id but displays the current catalog name: renames relabel historical aggregates, while repricing or deactivation must not change counts. Do not infer completion percentages across independently date-bounded started/completed cohorts, and never expose narratives, Patient/Visit identifiers, financial amounts, or raw audit data.

@@ -39,6 +39,7 @@ test('the canonical roles and permissions are seeded exactly', function () {
         'procedures.view' => 'View procedures',
         'recovery.manage' => 'Manage recovery',
         'recovery.view' => 'View recovery',
+        'reports.clinical.view' => 'View clinical and procedure reports',
         'reports.financial.view' => 'View financial reports',
         'reports.management.view' => 'View management reporting',
         'reports.operational.view' => 'View operational reports',
@@ -67,6 +68,7 @@ test('canonical role permission mappings are exact', function () {
         'administrator' => [
             'audit.view',
             'dashboard.view',
+            'reports.clinical.view',
             'reports.financial.view',
             'reports.management.view',
             'reports.operational.view',
@@ -83,10 +85,12 @@ test('canonical role permission mappings are exact', function () {
             'procedures.manage',
             'procedures.view',
             'recovery.view',
+            'reports.clinical.view',
         ],
         'management' => [
             'audit.view',
             'dashboard.view',
+            'reports.clinical.view',
             'reports.financial.view',
             'reports.management.view',
             'reports.operational.view',
@@ -126,7 +130,7 @@ test('canonical role permission mappings are exact', function () {
         ->all();
 
     expect($actualMappings)->toBe($expectedMappings)
-        ->and(DB::table('permission_role')->count())->toBe(49);
+        ->and(DB::table('permission_role')->count())->toBe(52);
 });
 
 test('the rbac seeder is idempotent and repairs canonical mappings', function () {
@@ -144,11 +148,12 @@ test('the rbac seeder is idempotent and repairs canonical mappings', function ()
     expect(Role::query()->orderBy('slug')->pluck('id', 'slug')->all())->toBe($roleIds)
         ->and(Permission::query()->orderBy('slug')->pluck('id', 'slug')->all())->toBe($permissionIds)
         ->and(Role::query()->count())->toBe(6)
-        ->and(Permission::query()->count())->toBe(33)
+        ->and(Permission::query()->count())->toBe(34)
         ->and($management->fresh()->permissions->pluck('slug')->sort()->values()->all())
         ->toBe([
             'audit.view',
             'dashboard.view',
+            'reports.clinical.view',
             'reports.financial.view',
             'reports.management.view',
             'reports.operational.view',
