@@ -14,6 +14,7 @@ use App\Http\Controllers\ConsultationController;
 use App\Http\Controllers\ConsultationFinancialClearanceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\FinancialReportController;
+use App\Http\Controllers\ManagementSummaryController;
 use App\Http\Controllers\OperationalReportController;
 use App\Http\Controllers\PatientActivityController;
 use App\Http\Controllers\PatientAppointmentController;
@@ -101,6 +102,10 @@ Route::middleware('auth')->group(function (): void {
     Route::get('/reports/clinical', ClinicalProcedureReportController::class)
         ->middleware('can:reports.clinical.view')
         ->name('reports.clinical.index');
+
+    Route::get('/reports/management', ManagementSummaryController::class)
+        ->middleware('can:reports.management.view')
+        ->name('reports.management.index');
 
     Route::get('/clinical/procedures', [ProcedureRecordController::class, 'index'])
         ->can('viewAny', ProcedureRecord::class)

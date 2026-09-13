@@ -17,6 +17,7 @@ import { index as patientActivityIndex } from '@/routes/patient-activity';
 import { index as patientIndex } from '@/routes/patients';
 import { index as clinicalReportIndex } from '@/routes/reports/clinical';
 import { index as financialReportIndex } from '@/routes/reports/financial';
+import { index as managementReportIndex } from '@/routes/reports/management';
 import { index as operationalReportIndex } from '@/routes/reports/operational';
 import { index as serviceCatalogIndex } from '@/routes/service-catalog';
 import { index as staffIndex } from '@/routes/staff';
@@ -185,6 +186,12 @@ export function navigationItems(
             href: clinicalReportIndex(),
             label: 'Clinical / Procedure Report',
             visible: capabilities.viewClinicalReports,
+        },
+        {
+            active: isCurrentPath(currentUrl, managementReportIndex.url()),
+            href: managementReportIndex(),
+            label: 'Management Summary',
+            visible: capabilities.viewManagementReports,
         },
         {
             active: isCurrentPath(currentUrl, serviceCatalogIndex.url(), true),

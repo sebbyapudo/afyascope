@@ -6,7 +6,10 @@ use App\Actions\Billing\CreateProcedureBill;
 use App\Actions\Billing\RecordConsultationPayment;
 use App\Actions\Consultations\RecordProcedureDecision;
 use App\Actions\Nursing\AssessRecoveryReadiness;
+use App\Actions\Reporting\BuildClinicalProcedureReport;
+use App\Actions\Reporting\BuildFinancialReport;
 use App\Actions\Reporting\BuildManagementSummary;
+use App\Actions\Reporting\BuildOperationalReport;
 use App\Actions\Reporting\ReportingPeriod;
 use App\AuditAction;
 use App\Models\AuditLog;
@@ -17,6 +20,7 @@ use App\Models\ProcedureDecision;
 use App\Models\ProcedureRecord;
 use App\Models\RecoveryDischarge;
 use App\Models\RecoveryEpisode;
+use App\Models\RecoveryEscalation;
 use App\Models\ServiceCatalogItem;
 use App\Models\User;
 use App\Models\Visit;
@@ -41,6 +45,21 @@ it('normalizes an inclusive reporting period in the configured timezone', functi
         CarbonImmutable::parse('2026-07-01', 'UTC'),
         CarbonImmutable::parse('2026-06-30', 'UTC'),
     ))->toThrow(InvalidArgumentException::class);
+});
+
+it('includes lifecycle events at both selected period boundaries', function () {
+    $management = User::factory()->forRole(StaffRole::Management)->create();
+    Visit::factory()->create(['occurred_at' => '2026-06-01 00:00:00']);
+    Visit::factory()->create(['occurred_at' => '2026-06-30 23:59:59']);
+    Visit::factory()->create(['occurred_at' => '2026-07-01 00:00:00']);
+
+    $summary = app(BuildManagementSummary::class)->handle(
+        $management,
+        reportingPeriod('2026-06-01', '2026-06-30'),
+    );
+
+    expect($summary['visits']['occurred'])->toBe(2)
+        ->and($summary['visits']['active'])->toBe(2);
 });
 
 it('derives operational and clinical measures from authoritative lifecycle records only', function () {
@@ -72,6 +91,8 @@ it('derives operational and clinical measures from authoritative lifecycle recor
         ->createAuthoritativeProcedureFixture($procedureDecision, $preparation);
     $recovery = RecoveryEpisode::factory()
         ->createAuthoritativeRecoveryFixture($procedureRecord, $nurse);
+    RecoveryEscalation::factory()
+        ->createResolvedEscalationFixture($recovery, $doctor);
 
     app(AssessRecoveryReadiness::class)->handle($nurse, $recovery, [
         'criteria_met' => true,
@@ -88,10 +109,10 @@ it('derives operational and clinical measures from authoritative lifecycle recor
     $this->travelTo('2026-07-01 00:00:00');
     Visit::factory()->create();
 
-    $summary = app(BuildManagementSummary::class)->handle(
-        $management,
-        reportingPeriod('2026-06-01', '2026-06-30'),
-    );
+    $period = reportingPeriod('2026-06-01', '2026-06-30');
+    $summary = app(BuildManagementSummary::class)->handle($management, $period);
+    $operationalReport = app(BuildOperationalReport::class)->handle($management, $period);
+    $clinicalReport = app(BuildClinicalProcedureReport::class)->handle($management, $period);
 
     expect($summary['visits'])->toBe([
         'occurred' => 3,
@@ -101,10 +122,31 @@ it('derives operational and clinical measures from authoritative lifecycle recor
         'consultationsStarted' => 2,
         'procedureRequired' => 1,
         'noProcedure' => 1,
+        'proceduresStarted' => 1,
         'proceduresCompleted' => 1,
         'recoveriesStarted' => 1,
+        'recoveriesCompleted' => 1,
+        'recoveryEscalationsRaised' => 1,
         'dischargesCompleted' => 1,
+        'procedurePathVisitsCompleted' => 1,
+        'noProcedureVisitsCompleted' => 1,
     ])->and($activeVisit->fresh()->status->value)->toBe('created');
+
+    expect($summary['visits'])->toBe($operationalReport['metrics']['visits'])
+        ->and([
+            'consultationsStarted' => $summary['clinical']['consultationsStarted'],
+            'procedureRequired' => $summary['clinical']['procedureRequired'],
+            'noProcedure' => $summary['clinical']['noProcedure'],
+            'proceduresCompleted' => $summary['clinical']['proceduresCompleted'],
+            'recoveriesStarted' => $summary['clinical']['recoveriesStarted'],
+            'dischargesCompleted' => $summary['clinical']['dischargesCompleted'],
+        ])->toBe($operationalReport['metrics']['milestones'])
+        ->and($summary['clinical']['proceduresStarted'])->toBe($clinicalReport['procedure']['started'])
+        ->and($summary['clinical']['proceduresCompleted'])->toBe($clinicalReport['procedure']['completed'])
+        ->and($summary['clinical']['recoveriesCompleted'])->toBe($clinicalReport['recovery']['completed'])
+        ->and($summary['clinical']['recoveryEscalationsRaised'])->toBe($clinicalReport['escalation']['raised'])
+        ->and($summary['clinical']['procedurePathVisitsCompleted'])->toBe($clinicalReport['terminalOutcomes']['procedurePathVisitsCompleted'])
+        ->and($summary['clinical']['noProcedureVisitsCompleted'])->toBe($clinicalReport['terminalOutcomes']['noProcedureVisitsCompleted']);
 
     $encodedSummary = json_encode($summary, JSON_THROW_ON_ERROR);
 
@@ -168,15 +210,16 @@ it('uses immutable Bill snapshots and payment records for date-bounded financial
         250_000,
     );
 
-    $summary = app(BuildManagementSummary::class)->handle(
-        $management,
-        reportingPeriod('2026-01-01', '2026-01-31'),
-    );
+    $period = reportingPeriod('2026-01-01', '2026-01-31');
+    $summary = app(BuildManagementSummary::class)->handle($management, $period);
+    $financialReport = app(BuildFinancialReport::class)->handle($management, $period);
 
     expect($summary['financial'])->toBe([
         'billedAmountMinor' => 350_000,
         'paidAmountMinor' => 100_000,
         'outstandingAmountMinor' => 250_000,
+        'billCount' => 2,
+        'paymentCount' => 1,
         'consultation' => [
             'billedAmountMinor' => 100_000,
             'paidAmountMinor' => 100_000,
@@ -191,6 +234,12 @@ it('uses immutable Bill snapshots and payment records for date-bounded financial
         ->and($procedureBill->fresh()->items->sole()->amount_minor)->toBe(250_000)
         ->and($consultationService->fresh()->unit_price_minor)->toBe(175_000)
         ->and($procedureService->fresh()->unit_price_minor)->toBe(325_000);
+
+    expect($summary['financial']['billedAmountMinor'])->toBe($financialReport['overall']['billedAmountMinor'])
+        ->and($summary['financial']['paidAmountMinor'])->toBe($financialReport['overall']['paidAmountMinor'])
+        ->and($summary['financial']['outstandingAmountMinor'])->toBe($financialReport['overall']['outstandingAmountMinor'])
+        ->and($summary['financial']['billCount'])->toBe($financialReport['overall']['billCount'])
+        ->and($summary['financial']['paymentCount'])->toBe($financialReport['flow']['paymentCount']);
 
     foreach ($summary['financial'] as $measure) {
         if (is_array($measure)) {

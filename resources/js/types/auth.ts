@@ -43,6 +43,7 @@ export type Capabilities = {
     viewOperationalReports: boolean;
     viewFinancialReports: boolean;
     viewClinicalReports: boolean;
+    viewManagementReports: boolean;
 };
 
 export type Auth = {

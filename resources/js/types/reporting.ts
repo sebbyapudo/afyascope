@@ -91,3 +91,43 @@ export type ClinicalProcedureReport = {
     };
     procedureDistribution: ClinicalProcedureDistribution[];
 };
+
+export type ManagementSummary = {
+    period: OperationalReportPeriod;
+    currency: string;
+    visits: {
+        occurred: number;
+        active: number;
+        completed: number;
+    };
+    clinical: {
+        consultationsStarted: number;
+        procedureRequired: number;
+        noProcedure: number;
+        proceduresStarted: number;
+        proceduresCompleted: number;
+        recoveriesStarted: number;
+        recoveriesCompleted: number;
+        recoveryEscalationsRaised: number;
+        dischargesCompleted: number;
+        procedurePathVisitsCompleted: number;
+        noProcedureVisitsCompleted: number;
+    };
+    financial: {
+        billedAmountMinor: number;
+        paidAmountMinor: number;
+        outstandingAmountMinor: number;
+        billCount: number;
+        paymentCount: number;
+        consultation: {
+            billedAmountMinor: number;
+            paidAmountMinor: number;
+            outstandingAmountMinor: number;
+        };
+        procedure: {
+            billedAmountMinor: number;
+            paidAmountMinor: number;
+            outstandingAmountMinor: number;
+        };
+    };
+};

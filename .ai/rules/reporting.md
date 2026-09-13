@@ -16,3 +16,6 @@ Financial reporting is authorized by reports.financial.view for active Accountan
 
 ## Clinical report event cohorts and catalog labels
 Clinical/procedure reports count each lifecycle event by its own authoritative event timestamp and expose aggregate-only data. Procedure distribution is grouped by durable service_catalog_item_id but displays the current catalog name: renames relabel historical aggregates, while repricing or deactivation must not change counts. Do not infer completion percentages across independently date-bounded started/completed cohorts, and never expose narratives, Patient/Visit identifiers, financial amounts, or raw audit data.
+
+## Compose management summaries from established aggregates
+Management summaries are restricted to Administrator and Management and must compose the established visit, financial, and clinical aggregate actions. Do not add dashboard-specific metric semantics, rates, patient/Visit identifiers, narratives, or a reporting store. Preserve the Financial Report's event-time and current-outstanding cohort semantics exactly.

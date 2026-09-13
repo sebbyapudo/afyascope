@@ -103,6 +103,7 @@ class HandleInertiaRequests extends Middleware
                     'viewOperationalReports' => $user?->can(StaffPermission::ReportsOperationalView) ?? false,
                     'viewFinancialReports' => $user?->can(StaffPermission::ReportsFinancialView) ?? false,
                     'viewClinicalReports' => $user?->can(StaffPermission::ReportsClinicalView) ?? false,
+                    'viewManagementReports' => $user?->can(StaffPermission::ReportsManagementView) ?? false,
                 ],
             ],
         ];
