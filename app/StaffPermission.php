@@ -34,6 +34,7 @@ enum StaffPermission: string
     case RecoveryView = 'recovery.view';
     case RecoveryManage = 'recovery.manage';
     case PatientActivityView = 'patient-activity.view';
+    case ReportsOperationalView = 'reports.operational.view';
     case ReportsManagementView = 'reports.management.view';
 
     public function displayName(): string
@@ -69,6 +70,7 @@ enum StaffPermission: string
             self::RecoveryView => 'View recovery',
             self::RecoveryManage => 'Manage recovery',
             self::PatientActivityView => 'View personal Patient activity',
+            self::ReportsOperationalView => 'View operational reports',
             self::ReportsManagementView => 'View management reporting',
         };
     }

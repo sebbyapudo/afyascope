@@ -100,6 +100,7 @@ class HandleInertiaRequests extends Middleware
                     'manageRecovery' => $user?->can('create', RecoveryEpisode::class) ?? false,
                     'reviewRecoveryEscalations' => $user?->can('viewAny', RecoveryEscalation::class) ?? false,
                     'viewPatientActivity' => $user?->can(StaffPermission::PatientActivityView) ?? false,
+                    'viewOperationalReports' => $user?->can(StaffPermission::ReportsOperationalView) ?? false,
                 ],
             ],
         ];

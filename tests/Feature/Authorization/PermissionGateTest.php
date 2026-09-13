@@ -47,6 +47,19 @@ test('only Administrator and Management receive management reporting access', fu
     'Management' => [StaffRole::Management, true],
 ]);
 
+test('Receptionist Administrator and Management receive operational reporting access', function (StaffRole $role, bool $allowed) {
+    $user = User::factory()->forRole($role)->create();
+
+    expect(Gate::forUser($user)->allows(StaffPermission::ReportsOperationalView))->toBe($allowed);
+})->with([
+    'Receptionist' => [StaffRole::Receptionist, true],
+    'Accountant' => [StaffRole::Accountant, false],
+    'Doctor' => [StaffRole::Doctor, false],
+    'Nurse' => [StaffRole::Nurse, false],
+    'Administrator' => [StaffRole::Administrator, true],
+    'Management' => [StaffRole::Management, true],
+]);
+
 test('operational roles do not receive audit visibility', function (StaffRole $role) {
     $user = User::factory()->forRole($role)->create();
 

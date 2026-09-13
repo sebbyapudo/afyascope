@@ -40,6 +40,7 @@ test('the canonical roles and permissions are seeded exactly', function () {
         'recovery.manage' => 'Manage recovery',
         'recovery.view' => 'View recovery',
         'reports.management.view' => 'View management reporting',
+        'reports.operational.view' => 'View operational reports',
         'roles.view' => 'View roles',
         'services.manage' => 'Manage services and pricing',
         'users.manage' => 'Manage staff users',
@@ -65,6 +66,7 @@ test('canonical role permission mappings are exact', function () {
             'audit.view',
             'dashboard.view',
             'reports.management.view',
+            'reports.operational.view',
             'roles.view',
             'services.manage',
             'users.manage',
@@ -79,7 +81,12 @@ test('canonical role permission mappings are exact', function () {
             'procedures.view',
             'recovery.view',
         ],
-        'management' => ['audit.view', 'dashboard.view', 'reports.management.view'],
+        'management' => [
+            'audit.view',
+            'dashboard.view',
+            'reports.management.view',
+            'reports.operational.view',
+        ],
         'nurse' => [
             'dashboard.view',
             'nursing.manage',
@@ -99,6 +106,7 @@ test('canonical role permission mappings are exact', function () {
             'patients.create',
             'patients.update',
             'patients.view',
+            'reports.operational.view',
             'visits.create',
             'visits.view',
         ],
@@ -114,7 +122,7 @@ test('canonical role permission mappings are exact', function () {
         ->all();
 
     expect($actualMappings)->toBe($expectedMappings)
-        ->and(DB::table('permission_role')->count())->toBe(43);
+        ->and(DB::table('permission_role')->count())->toBe(46);
 });
 
 test('the rbac seeder is idempotent and repairs canonical mappings', function () {
@@ -132,9 +140,14 @@ test('the rbac seeder is idempotent and repairs canonical mappings', function ()
     expect(Role::query()->orderBy('slug')->pluck('id', 'slug')->all())->toBe($roleIds)
         ->and(Permission::query()->orderBy('slug')->pluck('id', 'slug')->all())->toBe($permissionIds)
         ->and(Role::query()->count())->toBe(6)
-        ->and(Permission::query()->count())->toBe(31)
+        ->and(Permission::query()->count())->toBe(32)
         ->and($management->fresh()->permissions->pluck('slug')->sort()->values()->all())
-        ->toBe(['audit.view', 'dashboard.view', 'reports.management.view']);
+        ->toBe([
+            'audit.view',
+            'dashboard.view',
+            'reports.management.view',
+            'reports.operational.view',
+        ]);
 });
 
 test('role slugs are unique', function () {

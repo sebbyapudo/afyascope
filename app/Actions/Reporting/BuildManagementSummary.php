@@ -5,23 +5,16 @@ namespace App\Actions\Reporting;
 use App\BillStatus;
 use App\BillType;
 use App\Models\BillItem;
-use App\Models\Consultation;
 use App\Models\Payment;
-use App\Models\ProcedureDecision;
-use App\Models\ProcedureRecord;
-use App\Models\RecoveryDischarge;
-use App\Models\RecoveryEpisode;
 use App\Models\User;
-use App\Models\Visit;
-use App\ProcedureDecisionOutcome;
-use App\ProcedureRecordStatus;
 use App\StaffPermission;
-use App\VisitStatus;
 use Illuminate\Support\Facades\Gate;
 use stdClass;
 
 final class BuildManagementSummary
 {
+    public function __construct(private AggregateOperationalMeasures $aggregateOperationalMeasures) {}
+
     /**
      * @return array{
      *     period: array{fromDate: string, throughDate: string, timezone: string},
@@ -40,8 +33,7 @@ final class BuildManagementSummary
     {
         Gate::forUser($actor)->authorize(StaffPermission::ReportsManagementView);
 
-        $visitMetrics = $this->visitMetrics($period);
-        $decisionMetrics = $this->decisionMetrics($period);
+        $operationalMetrics = $this->aggregateOperationalMeasures->handle($period);
         $billMetrics = $this->billMetrics($period);
         $paymentMetrics = $this->paymentMetrics($period);
         $timezone = config('app.timezone');
@@ -52,31 +44,8 @@ final class BuildManagementSummary
                 'throughDate' => $period->endsAt->toDateString(),
                 'timezone' => is_string($timezone) ? $timezone : 'UTC',
             ],
-            'visits' => [
-                'occurred' => $this->integer($visitMetrics, 'occurred'),
-                'active' => $this->integer($visitMetrics, 'active'),
-                'completed' => Visit::query()
-                    ->where('status', VisitStatus::Completed->value)
-                    ->whereBetween('completed_at', $period->bounds())
-                    ->count(),
-            ],
-            'clinical' => [
-                'consultationsStarted' => Consultation::query()
-                    ->whereBetween('started_at', $period->bounds())
-                    ->count(),
-                'procedureRequired' => $this->integer($decisionMetrics, 'procedure_required'),
-                'noProcedure' => $this->integer($decisionMetrics, 'no_procedure'),
-                'proceduresCompleted' => ProcedureRecord::query()
-                    ->where('status', ProcedureRecordStatus::Completed->value)
-                    ->whereBetween('completed_at', $period->bounds())
-                    ->count(),
-                'recoveriesStarted' => RecoveryEpisode::query()
-                    ->whereBetween('started_at', $period->bounds())
-                    ->count(),
-                'dischargesCompleted' => RecoveryDischarge::query()
-                    ->whereBetween('discharged_at', $period->bounds())
-                    ->count(),
-            ],
+            'visits' => $operationalMetrics['visits'],
+            'clinical' => $operationalMetrics['milestones'],
             'financial' => [
                 'billedAmountMinor' => $this->integer($billMetrics, 'billed'),
                 'paidAmountMinor' => $this->integer($paymentMetrics, 'paid'),
@@ -93,32 +62,6 @@ final class BuildManagementSummary
                 ],
             ],
         ];
-    }
-
-    private function visitMetrics(ReportingPeriod $period): ?stdClass
-    {
-        return Visit::query()
-            ->whereBetween('occurred_at', $period->bounds())
-            ->toBase()
-            ->selectRaw('COUNT(*) as occurred')
-            ->selectRaw('COALESCE(SUM(CASE WHEN status <> ? THEN 1 ELSE 0 END), 0) as active', [
-                VisitStatus::Completed->value,
-            ])
-            ->first();
-    }
-
-    private function decisionMetrics(ReportingPeriod $period): ?stdClass
-    {
-        return ProcedureDecision::query()
-            ->whereBetween('decided_at', $period->bounds())
-            ->toBase()
-            ->selectRaw('COALESCE(SUM(CASE WHEN outcome = ? THEN 1 ELSE 0 END), 0) as procedure_required', [
-                ProcedureDecisionOutcome::ProcedureRequired->value,
-            ])
-            ->selectRaw('COALESCE(SUM(CASE WHEN outcome = ? THEN 1 ELSE 0 END), 0) as no_procedure', [
-                ProcedureDecisionOutcome::NoProcedure->value,
-            ])
-            ->first();
     }
 
     private function billMetrics(ReportingPeriod $period): ?stdClass
