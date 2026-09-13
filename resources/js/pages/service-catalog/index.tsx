@@ -228,6 +228,16 @@ export default function CatalogIndex({
                                                         {...updateStatus.form(
                                                             service.id,
                                                         )}
+                                                        onSubmit={(event) => {
+                                                            if (
+                                                                service.isActive &&
+                                                                !window.confirm(
+                                                                    `Deactivate ${service.name}? It will be unavailable for new billing and procedure selections, while historical records remain unchanged.`,
+                                                                )
+                                                            ) {
+                                                                event.preventDefault();
+                                                            }
+                                                        }}
                                                     >
                                                         {({ processing }) => (
                                                             <>
@@ -249,9 +259,11 @@ export default function CatalogIndex({
                                                                     }
                                                                     type="submit"
                                                                 >
-                                                                    {service.isActive
-                                                                        ? 'Deactivate'
-                                                                        : 'Activate'}
+                                                                    {processing
+                                                                        ? 'Saving…'
+                                                                        : service.isActive
+                                                                          ? 'Deactivate'
+                                                                          : 'Activate'}
                                                                 </button>
                                                             </>
                                                         )}

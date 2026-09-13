@@ -57,30 +57,35 @@ export function navigationItems(
     return [
         {
             active: isCurrentPath(currentUrl, dashboard.url()),
+            group: 'Workspace',
             href: dashboard(),
             label: 'Dashboard',
             visible: capabilities.viewDashboard,
         },
         {
             active: isCurrentPath(currentUrl, patientIndex.url(), true),
+            group: 'Reception',
             href: patientIndex(),
             label: 'Patients',
             visible: capabilities.viewPatients,
         },
         {
             active: isCurrentPath(currentUrl, appointmentIndex.url(), true),
+            group: 'Reception',
             href: appointmentIndex(),
             label: 'Appointments',
             visible: capabilities.viewAppointments,
         },
         {
             active: isCurrentPath(currentUrl, visitIndex.url(), true),
+            group: 'Reception',
             href: visitIndex(),
             label: 'Visits',
             visible: capabilities.viewVisits,
         },
         {
             active: isCurrentPath(currentUrl, checkInIndex.url(), true),
+            group: 'Reception',
             href: checkInIndex(),
             label: 'Check-in',
             visible: capabilities.viewCheckIns,
@@ -91,6 +96,7 @@ export function navigationItems(
                 clinicalConsultationIndex.url(),
                 true,
             ),
+            group: 'Clinical',
             href: clinicalConsultationIndex(),
             label: 'Clinical Consultations',
             visible: capabilities.viewConsultations,
@@ -101,6 +107,7 @@ export function navigationItems(
                 clinicalProcedureIndex.url(),
                 true,
             ),
+            group: 'Clinical',
             href: clinicalProcedureIndex(),
             label: 'Procedures',
             visible: capabilities.manageProcedures,
@@ -111,6 +118,7 @@ export function navigationItems(
                 recoveryEscalationIndex.url(),
                 true,
             ),
+            group: 'Clinical',
             href: recoveryEscalationIndex(),
             label: 'Recovery Review',
             visible: capabilities.reviewRecoveryEscalations,
@@ -121,6 +129,7 @@ export function navigationItems(
                 consultationBillingIndex.url(),
                 true,
             ),
+            group: 'Finance',
             href: consultationBillingIndex(),
             label: 'Consultation Billing',
             visible: capabilities.viewBilling,
@@ -131,6 +140,7 @@ export function navigationItems(
                 procedurePreparationIndex.url(),
                 true,
             ),
+            group: 'Nursing',
             href: procedurePreparationIndex(),
             label: 'Procedure Preparation',
             visible: capabilities.manageNursing,
@@ -141,72 +151,84 @@ export function navigationItems(
                 procedureBillingIndex.url(),
                 true,
             ),
+            group: 'Finance',
             href: procedureBillingIndex(),
             label: 'Procedure Billing',
             visible: capabilities.viewBilling,
         },
         {
             active: isCurrentPath(currentUrl, recoveryIndex.url(), true),
+            group: 'Nursing',
             href: recoveryIndex(),
             label: 'Recovery',
             visible: capabilities.manageRecovery,
         },
         {
             active: isCurrentPath(currentUrl, paymentIndex.url(), true),
+            group: 'Finance',
             href: paymentIndex(),
             label: 'Payments',
             visible: capabilities.viewPayments,
         },
         {
             active: isCurrentPath(currentUrl, clearanceIndex.url(), true),
+            group: 'Finance',
             href: clearanceIndex(),
             label: 'Financial Clearance',
             visible: capabilities.viewClearance,
         },
         {
             active: isCurrentPath(currentUrl, patientActivityIndex.url()),
+            group: 'Tracking',
             href: patientActivityIndex(),
             label: 'Patient tracking',
             visible: capabilities.viewPatientActivity,
         },
         {
             active: isCurrentPath(currentUrl, operationalReportIndex.url()),
+            group: 'Reporting',
             href: operationalReportIndex(),
             label: 'Operational Report',
             visible: capabilities.viewOperationalReports,
         },
         {
             active: isCurrentPath(currentUrl, financialReportIndex.url()),
+            group: 'Reporting',
             href: financialReportIndex(),
             label: 'Financial Report',
             visible: capabilities.viewFinancialReports,
         },
         {
             active: isCurrentPath(currentUrl, clinicalReportIndex.url()),
+            group: 'Reporting',
             href: clinicalReportIndex(),
             label: 'Clinical / Procedure Report',
             visible: capabilities.viewClinicalReports,
         },
         {
             active: isCurrentPath(currentUrl, managementReportIndex.url()),
+            group: 'Reporting',
             href: managementReportIndex(),
             label: 'Management Summary',
             visible: capabilities.viewManagementReports,
         },
         {
             active: isCurrentPath(currentUrl, serviceCatalogIndex.url(), true),
+            group: 'Administration',
             href: serviceCatalogIndex(),
             label: 'Service Catalog',
             visible: capabilities.manageServiceCatalog,
         },
         {
             active: isCurrentPath(currentUrl, staffIndex.url(), true),
+            group: 'Administration',
             href: staffIndex(),
             label: 'Staff Administration',
             visible: capabilities.viewUsers,
         },
         {
             active: isCurrentPath(currentUrl, auditLogIndex.url()),
+            group: 'Administration',
             href: auditLogIndex(),
             label: 'Audit Log',
             visible: capabilities.viewAudit,
@@ -220,36 +242,72 @@ export function AppNavigation({
     onNavigate,
 }: AppNavigationProps) {
     const items = navigationItems(capabilities, currentUrl);
+    const groups = items.reduce<
+        Array<{ label: string; items: (typeof items)[number][] }>
+    >((sections, item) => {
+        const currentGroup = sections.find(
+            (section) => section.label === item.group,
+        );
+
+        if (currentGroup?.label === item.group) {
+            currentGroup.items.push(item);
+
+            return sections;
+        }
+
+        sections.push({ label: item.group, items: [item] });
+
+        return sections;
+    }, []);
 
     return (
         <nav aria-label="Primary navigation">
-            <ul className="grid gap-1">
-                {items.map((item) => (
-                    <li key={item.label}>
-                        <Link
-                            aria-current={item.active ? 'page' : undefined}
-                            className={cn(
-                                'relative flex min-h-11 items-center rounded-control px-4 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-aqua data-loading:opacity-60',
-                                item.active &&
-                                    'bg-white/10 font-semibold text-white',
-                            )}
-                            href={item.href}
-                            onClick={onNavigate}
+            <div className="grid gap-6">
+                {groups.map((group) => (
+                    <section
+                        aria-labelledby={`navigation-${group.label}`}
+                        key={group.label}
+                    >
+                        <h2
+                            className="px-4 pb-2 text-xs font-semibold tracking-wider text-white/60 uppercase"
+                            id={`navigation-${group.label}`}
                         >
-                            {item.active ? (
-                                <span
-                                    aria-hidden="true"
-                                    className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand-aqua"
-                                />
-                            ) : null}
-                            <span>{item.label}</span>
-                            {item.active ? (
-                                <span className="sr-only">, current page</span>
-                            ) : null}
-                        </Link>
-                    </li>
+                            {group.label}
+                        </h2>
+                        <ul className="grid gap-1">
+                            {group.items.map((item) => (
+                                <li key={item.label}>
+                                    <Link
+                                        aria-current={
+                                            item.active ? 'page' : undefined
+                                        }
+                                        className={cn(
+                                            'relative flex min-h-11 items-center rounded-control px-4 py-2.5 text-sm font-medium text-white/80 transition-colors hover:bg-white/10 hover:text-white focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-aqua data-loading:opacity-60',
+                                            item.active &&
+                                                'bg-white/10 font-semibold text-white',
+                                        )}
+                                        href={item.href}
+                                        onClick={onNavigate}
+                                    >
+                                        {item.active ? (
+                                            <span
+                                                aria-hidden="true"
+                                                className="absolute inset-y-2 left-0 w-1 rounded-r-full bg-brand-aqua"
+                                            />
+                                        ) : null}
+                                        <span>{item.label}</span>
+                                        {item.active ? (
+                                            <span className="sr-only">
+                                                , current page
+                                            </span>
+                                        ) : null}
+                                    </Link>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
                 ))}
-            </ul>
+            </div>
         </nav>
     );
 }

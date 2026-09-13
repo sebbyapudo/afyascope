@@ -10,6 +10,7 @@ Before planning or editing, find the row whose globs match the file's path and r
 | app/{Actions/Billing,Models,Http/Controllers}/** | .ai/rules/billing-models-http-controllers.md |
 | app/{Actions,Models,Policies,Http/Controllers,Http/Requests}/** | .ai/rules/controllers-http-requests.md |
 | app/Http/Controllers/PatientController.php | .ai/rules/controllers.md |
+| app/Actions/Dashboard/** | .ai/rules/dashboard.md |
 | database/** | .ai/rules/database.md |
 | database/migrations/*_create_visits_table.php | .ai/rules/migrations.md |
 | app/{Models,Actions,Policies}/**/*.php | .ai/rules/models-actions-policies.md |

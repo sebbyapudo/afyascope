@@ -35,9 +35,6 @@ function SidebarContent({ onNavigate }: SidebarContentProps) {
             </div>
 
             <div className="flex-1 overflow-y-auto px-3 py-6">
-                <p className="px-4 pb-3 text-xs font-semibold tracking-wider text-white/60 uppercase">
-                    Workspace
-                </p>
                 <AppNavigation
                     capabilities={props.auth.capabilities}
                     currentUrl={url}

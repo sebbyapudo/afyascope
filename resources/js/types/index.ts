@@ -4,6 +4,7 @@ export type * from './auth';
 export type * from './billing';
 export type * from './check-in';
 export type * from './consultation';
+export type * from './dashboard';
 export type * from './patient';
 export type * from './patient-activity';
 export type * from './pre-procedure-readiness';

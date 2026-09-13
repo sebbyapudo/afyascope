@@ -21,7 +21,23 @@ export function StaffForm({
     submitLabel,
 }: StaffFormProps) {
     return (
-        <Form {...form}>
+        <Form
+            {...form}
+            onSubmit={(event) => {
+                const isBeingDisabled =
+                    staffUser?.isActive === true &&
+                    new FormData(event.currentTarget).get('is_active') === '0';
+
+                if (
+                    isBeingDisabled &&
+                    !window.confirm(
+                        `Disable ${staffUser.name}'s staff account? They will be signed out and unable to sign in until an Administrator reactivates the account.`,
+                    )
+                ) {
+                    event.preventDefault();
+                }
+            }}
+        >
             {({ errors, processing }) => (
                 <div className="grid gap-6">
                     <div className="grid gap-5 sm:grid-cols-2">

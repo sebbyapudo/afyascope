@@ -119,7 +119,19 @@ export default function ShowService({
                                 ? 'This service is available for new eligible selections and Bills.'
                                 : 'This service remains visible in history but is unavailable for new selections and Bills.'}
                         </p>
-                        <Form {...updateStatus.form(service.id)}>
+                        <Form
+                            {...updateStatus.form(service.id)}
+                            onSubmit={(event) => {
+                                if (
+                                    service.isActive &&
+                                    !window.confirm(
+                                        `Deactivate ${service.name}? It will be unavailable for new billing and procedure selections, while historical records remain unchanged.`,
+                                    )
+                                ) {
+                                    event.preventDefault();
+                                }
+                            }}
+                        >
                             {({ processing }) => (
                                 <>
                                     <input

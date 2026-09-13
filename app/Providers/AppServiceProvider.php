@@ -41,6 +41,8 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Inertia\ExceptionResponse;
+use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -59,6 +61,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         $this->configureAuthorization();
+        $this->configureInertiaErrorHandling();
     }
 
     /**
@@ -108,5 +111,19 @@ class AppServiceProvider extends ServiceProvider
                 static fn (User $user): bool => $user->hasPermission($permission),
             );
         }
+    }
+
+    private function configureInertiaErrorHandling(): void
+    {
+        Inertia::handleExceptionsUsing(function (ExceptionResponse $response): ?ExceptionResponse {
+            if (app()->environment(['local', 'testing'])
+                || ! in_array($response->statusCode(), [403, 404, 419, 500, 503], true)) {
+                return null;
+            }
+
+            return $response
+                ->render('error', ['status' => $response->statusCode()])
+                ->withSharedData();
+        });
     }
 }
