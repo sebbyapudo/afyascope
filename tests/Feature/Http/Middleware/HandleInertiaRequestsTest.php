@@ -51,6 +51,7 @@ test('authenticated Inertia responses share only sanitized identity role and cap
                 'reviewRecoveryEscalations' => false,
                 'viewPatientActivity' => false,
                 'viewOperationalReports' => true,
+                'viewFinancialReports' => true,
             ])
             ->missing('auth.user.password')
             ->missing('auth.user.remember_token')
@@ -96,6 +97,7 @@ test('guest Inertia responses share no staff identity or capabilities', function
                 'reviewRecoveryEscalations' => false,
                 'viewPatientActivity' => false,
                 'viewOperationalReports' => false,
+                'viewFinancialReports' => false,
             ])
         );
 });
@@ -133,6 +135,7 @@ test('Receptionist Inertia responses expose only the Patient capabilities grante
             ->where('auth.capabilities.reviewRecoveryEscalations', false)
             ->where('auth.capabilities.viewPatientActivity', true)
             ->where('auth.capabilities.viewOperationalReports', true)
+            ->where('auth.capabilities.viewFinancialReports', false)
         );
 });
 
@@ -164,6 +167,7 @@ test('Accountant Inertia responses expose only the billing capabilities granted 
             ->where('auth.capabilities.reviewRecoveryEscalations', false)
             ->where('auth.capabilities.viewPatientActivity', true)
             ->where('auth.capabilities.viewOperationalReports', false)
+            ->where('auth.capabilities.viewFinancialReports', true)
         );
 });
 
@@ -195,6 +199,7 @@ test('Doctor Inertia responses expose only the consultation capabilities granted
             ->where('auth.capabilities.reviewRecoveryEscalations', true)
             ->where('auth.capabilities.viewPatientActivity', true)
             ->where('auth.capabilities.viewOperationalReports', false)
+            ->where('auth.capabilities.viewFinancialReports', false)
         );
 });
 
@@ -213,6 +218,7 @@ test('Nurse Inertia responses expose only the Nursing preparation capability', f
             ->where('auth.capabilities.reviewRecoveryEscalations', false)
             ->where('auth.capabilities.viewPatientActivity', true)
             ->where('auth.capabilities.viewOperationalReports', false)
+            ->where('auth.capabilities.viewFinancialReports', false)
             ->where('auth.capabilities.viewBilling', false)
             ->where('auth.capabilities.createBilling', false)
             ->where('auth.capabilities.viewPayments', false)

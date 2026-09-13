@@ -55,6 +55,7 @@ enum StaffRole: string
                 StaffPermission::ClearanceView,
                 StaffPermission::ClearanceCreate,
                 StaffPermission::PatientActivityView,
+                StaffPermission::ReportsFinancialView,
             ],
             self::Receptionist => [
                 StaffPermission::DashboardView,
@@ -78,12 +79,14 @@ enum StaffRole: string
                 StaffPermission::RolesView,
                 StaffPermission::AuditView,
                 StaffPermission::ServicesManage,
+                StaffPermission::ReportsFinancialView,
                 StaffPermission::ReportsOperationalView,
                 StaffPermission::ReportsManagementView,
             ],
             self::Management => [
                 StaffPermission::DashboardView,
                 StaffPermission::AuditView,
+                StaffPermission::ReportsFinancialView,
                 StaffPermission::ReportsOperationalView,
                 StaffPermission::ReportsManagementView,
             ],

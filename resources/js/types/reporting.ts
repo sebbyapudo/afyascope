@@ -31,3 +31,26 @@ export type OperationalReport = {
     metrics: OperationalReportMetrics;
     stages: OperationalStage[];
 };
+
+export type FinancialReportSummary = {
+    billedAmountMinor: number;
+    paidAmountMinor: number;
+    outstandingAmountMinor: number;
+    billCount: number;
+};
+
+export type FinancialReport = {
+    period: OperationalReportPeriod;
+    currency: string;
+    overall: FinancialReportSummary & {
+        paidBillCount: number;
+        outstandingBillCount: number;
+    };
+    consultation: FinancialReportSummary;
+    procedure: FinancialReportSummary;
+    flow: {
+        paymentCount: number;
+        receiptCount: number;
+        financialClearanceCount: number;
+    };
+};

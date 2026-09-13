@@ -41,6 +41,7 @@ export type Capabilities = {
     reviewRecoveryEscalations: boolean;
     viewPatientActivity: boolean;
     viewOperationalReports: boolean;
+    viewFinancialReports: boolean;
 };
 
 export type Auth = {

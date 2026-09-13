@@ -10,3 +10,6 @@ Reporting is read-only and aggregates existing operational tables server-side; d
 
 ## Scope authorization and derive operational stages by report
 Every report builder authorizes its own report permission at the query boundary. BuildManagementSummary remains reports.management.view (Administrator/Management), while BuildOperationalReport uses reports.operational.view (Receptionist/Administrator/Management). Operational stage distribution is a read-only current-state projection over the selected Visit occurrence cohort using authoritative durable workflow records; never persist a parallel stage field or expose patient identifiers, narratives, financial values, or audit internals.
+
+## Financial report event cohorts and immutable amounts
+Financial reporting is authorized by reports.financial.view for active Accountant, Administrator, and Management users only. Compute billed Bill cohorts by bills.created_at using immutable bill_items.amount_minor snapshots; payments by payments.recorded_at, receipts by receipts.issued_at, and clearances by financial_clearances.granted_at. Outstanding is the current balance of Bills created in the selected period, net of their persisted authoritative Payment regardless of payment date, so billed minus in-period paid activity is not expected to equal outstanding.
