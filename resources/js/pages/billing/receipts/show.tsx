@@ -1,5 +1,6 @@
 import { Head, Link, usePage } from '@inertiajs/react';
 import { ActionLink, Button, textLinkStyles } from '@/components/ui/button';
+import { DocumentFooter } from '@/components/ui/document-footer';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
 import { Panel } from '@/components/ui/panel';
@@ -194,6 +195,8 @@ export default function ReceiptShow({ receipt, status }: ReceiptShowProps) {
                             </dd>
                         </div>
                     </dl>
+
+                    <DocumentFooter className="mx-5 pb-5 sm:mx-8" />
                 </Panel>
 
                 <Panel className="border-info-border bg-info-soft p-5 shadow-none sm:p-6 print:hidden">

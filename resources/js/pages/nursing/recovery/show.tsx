@@ -1,6 +1,7 @@
 import { Form, Head, Link } from '@inertiajs/react';
 import { useState } from 'react';
 import { Button, textLinkStyles } from '@/components/ui/button';
+import { DocumentFooter } from '@/components/ui/document-footer';
 import { FormField, formControlStyles } from '@/components/ui/form-field';
 import { PageContainer } from '@/components/ui/page-container';
 import { PageHeader } from '@/components/ui/page-header';
@@ -635,6 +636,8 @@ export default function RecoveryShow({ recovery, status }: RecoveryShowProps) {
                                 ))}
                             </dl>
                         </div>
+
+                        <DocumentFooter className="mt-6" />
                     </Panel>
                 ) : recovery.canDischarge ? (
                     <Panel className="border-success-border p-5 sm:p-8">
